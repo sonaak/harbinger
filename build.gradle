@@ -1,0 +1,134 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            url 'http://dl.bintray.com/vermeulen-mp/gradle-plugins'
+        }
+    }
+    dependencies {
+        classpath 'org.ajoberstar:grgit:2.1.0'
+        classpath 'com.wiredforcode:gradle-spawn-plugin:0.8.0'
+    }
+}
+
+plugins {
+    id 'org.ajoberstar.grgit' version '2.1.0'
+}
+
+
+def buildImage = "sonaak/harbinger-builder"
+def imageName = "sonnak/harbinger"
+
+
+/**
+ * Build the sparrow binary (to be used in an alpine container)
+ */
+task sparrowBinary {
+    def version = new File("version.txt").text
+
+    // incremental build skips if the input files
+    // are unchanged
+    FileTree inputFiles = fileTree(dir: ".")
+    inputFiles.include "**/*.go"
+    inputFiles.include "version.txt"
+    inputFiles.include "bin/build/entrypoint.sh"
+    inputFiles.include "bin/build/Dockerfile"
+
+    inputs.files(inputFiles)
+    outputs.files("bin/build/${version}/sparrow")
+
+    doLast {
+        exec {
+            workingDir '.'
+            commandLine 'docker', 'build',
+                    '--file', 'bin/build/Dockerfile',
+                    '-t', "${buildImage}:${version}", "."
+        }
+
+        exec {
+            workingDir '.'
+            commandLine 'docker', 'run',
+                    '-e', "VERSION=${version}",
+                    '-e', "UID=${uid}",
+                    '-v', "${System.getProperty("user.dir")}/bin/build:/go/out",
+                    "${buildImage}:${version}",
+                    'build'
+        }
+        grgit.close()
+    }
+}
+
+task clean {
+    doLast {
+        def version = new File("version.txt").text
+
+        // if the version exists, remove it
+        def f = new File("bin/build/${version}")
+
+        // if the docker build image exists, remove it
+        if (f.isDirectory()) {
+            println "Cleaning binary from build/${version}"
+            def result = f.deleteDir()
+            assert result
+        } else {
+            println "[SKIPPED] No binary to clean."
+        }
+
+        def buildImageId = new ByteArrayOutputStream()
+        exec {
+            standardOutput = buildImageId
+            commandLine 'docker', 'images', '-q', "${buildImage}:${version}"
+        }
+
+        if (buildImageId.toString().trim() != "") {
+            exec {
+                commandLine 'docker', 'rmi', '-f', "${buildImage}:${version}"
+            }
+        } else {
+            println "[SKIPPED] No build image to remove."
+        }
+
+        // if the docker image exists, remove it
+        def imageId = new ByteArrayOutputStream()
+        exec {
+            standardOutput = imageId
+            commandLine 'docker', 'images', '-q', "${imageName}:${version}"
+        }
+
+        if (imageId.toString().trim() != "") {
+            exec {
+                commandLine 'docker', 'rmi', '-f', "${imageName}:${version}"
+            }
+        } else {
+            println "[SKIPPED] No image to remove."
+        }
+    }
+}
+
+task sparrowImage {
+    dependsOn = ["sparrowBinary"]
+
+    def version = new File("version.txt").text
+    def date = new Date().format('yyyy-MM-dd HH:mm:ssZ')
+    def ghash = grgit.head().id
+    inputs.files(["bin/build/${version}/sparrow", "bin/Dockerfile", "bin/entrypoint.sh"])
+    outputs.files("bin/build/${version}/docker.out")
+
+    doLast {
+        exec {
+            workingDir 'bin'
+            commandLine 'docker', 'build',
+                    '--rm',
+                    '--build-arg', "VERSION=${version}",
+                    '--build-arg', "GHASH=${ghash}",
+                    '--build-arg', "BUILD_TIME=${date}",
+                    "-t", "${imageName}:${version}",
+                    "."
+        }
+        exec {
+            workingDir '.'
+            commandLine 'docker', 'tag', "${imageName}:${version}", "${imageName}:latest"
+        }
+        grgit.close()
+    }
+}
