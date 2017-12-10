@@ -16,3 +16,11 @@
 # IntelliJ
 .idea/
 *.iml
+
+# Binary output
+**/build/
+!bin/build/entrypoint.sh
+!bin/build/Dockerfile
+
+# Gradle files
+**/.gradle
