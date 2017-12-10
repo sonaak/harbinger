@@ -18,5 +18,8 @@ WORKDIR $WORK_DIR
 COPY build/${VERSION}/sparrow ${WORK_DIR}/sparrow
 RUN chmod 500 ${WORK_DIR}
 
+# EXPOSE 8080
+EXPOSE 8080
+
 # Set the entrypoint
 ENTRYPOINT ["/opt/sonaak/sparrow"]

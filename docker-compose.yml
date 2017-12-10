@@ -4,3 +4,6 @@ services:
     image: sonaak/sparrow:latest
     env_file:
     - ~/.aws/${AWS_ACCOUNT_ID}.env
+
+    ports:
+    - "8080:8080"
