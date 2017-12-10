@@ -7,6 +7,11 @@ import (
 
 
 func main() {
-	app := &app.App{}
-	app.Run()
+	processor, err := app.Setup()
+
+	if err != nil {
+		panic(err)
+	}
+
+	processor.Run()
 }
