@@ -17,7 +17,7 @@ plugins {
 
 
 def buildImage = "sonaak/harbinger-builder"
-def imageName = "sonnak/harbinger"
+def imageName = "sonaak/sparrow"
 
 
 /**
