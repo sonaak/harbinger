@@ -24,3 +24,6 @@
 
 # Gradle files
 **/.gradle
+
+# vendor files
+vendor/
