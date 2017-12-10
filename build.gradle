@@ -132,3 +132,23 @@ task sparrowImage {
         grgit.close()
     }
 }
+
+task runSparrow {
+    dependsOn = ["sparrowImage"]
+    doLast {
+        exec {
+            workingDir "."
+            environment 'AWS_ACCOUNT_ID', sparrowAwsAccountId
+            commandLine 'docker-compose', 'up', '-d'
+        }
+    }
+}
+
+task stopSparrow {
+    doLast {
+        exec {
+            workingDir '.'
+            commandLine 'docker-compose', 'down'
+        }
+    }
+}

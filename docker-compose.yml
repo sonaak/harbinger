@@ -1,0 +1,6 @@
+version: '3'
+services:
+  sparrow:
+    image: sonaak/sparrow:latest
+    env_file:
+    - ~/.aws/${AWS_ACCOUNT_ID}.env
