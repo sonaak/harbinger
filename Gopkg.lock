@@ -3,6 +3,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/evilwire/go-env"
+  packages = ["."]
+  revision = "5807b9dab83bfaf07bfc184949b04e72009390ba"
+
+[[projects]]
+  branch = "master"
   name = "github.com/gin-contrib/sse"
   packages = ["."]
   revision = "22d885f9ecc78bf4ee5d72b937e4bbcdc58e8cae"
@@ -32,6 +38,12 @@
   version = "v0.0.3"
 
 [[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/ugorji/go"
   packages = ["codec"]
@@ -58,6 +70,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7961aaad6a05bd6dc7aa13a3094a10b4a7f3c092bc11e6900b0cbaf6f8663b79"
+  inputs-digest = "6448d7389c825e1398566fa734d87146f7302f13576cc349cc15becdfebc22f0"
   solver-name = "gps-cdcl"
   solver-version = 1

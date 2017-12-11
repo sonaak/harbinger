@@ -109,7 +109,7 @@ task sparrowImage {
     dependsOn = ["sparrowBinary"]
 
     def version = new File("version.txt").text
-    def date = new Date().format('yyyy-MM-dd HH:mm:ssZ')
+    def date = new Date().format('yyyy-MM-dd\'T\'HH:mm:ssXXX')
     def ghash = grgit.head().id
     inputs.files(["bin/build/${version}/sparrow", "bin/Dockerfile", "bin/entrypoint.sh"])
     outputs.files("bin/build/${version}/docker.out")
