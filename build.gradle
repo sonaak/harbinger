@@ -164,10 +164,16 @@ task restartSparrow {
     }
 }
 
-task vet {
+
+task unitTest {
     doLast {
         exec {
-            commandLine 'codeclimate', 'analyze'
+            commandLine 'go', 'test', '-coverprofile', 'cover.out'
+        }
+        exec {
+            commandLine 'go', 'tool', 'cover',
+                    '-html', 'cover.out',
+                    '-o', 'coverage.html'
         }
     }
 }

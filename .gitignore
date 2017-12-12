@@ -27,3 +27,7 @@
 
 # vendor files
 vendor/
+
+# tests and coverages
+cover.out
+coverage.html
