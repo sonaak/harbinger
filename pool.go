@@ -94,8 +94,13 @@ func (pool *ActorPool) init(worker Worker, tries uint) error {
 					// from being able to retrieve message. Cannot block on
 					// putting this message back on queue
 					go func() {
-						pool.requestChan <- op
+						defer func() {
+							if r := recover(); r != nil {
+								// TODO: do something here: we have failed to redrive msg
+							}
+						}()
 
+						pool.requestChan <- op
 					}()
 				} else {
 					worker.HandleError(err, op)

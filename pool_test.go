@@ -186,6 +186,13 @@ func TestActorPool_Start(t *testing.T) {
 	testDone := make(chan interface{})
 	timeout := make(chan interface{})
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Error: an unexpected error occurred: %v", r)
+				testDone <- true
+			}
+		}()
+
 		pool := NewPool([]Worker{
 			NewAddOneActor(1*time.Millisecond, nil),
 		})
@@ -196,11 +203,6 @@ func TestActorPool_Start(t *testing.T) {
 
 		testDone <- true
 
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("Error: an unexpected error occurred: %v", r)
-			}
-		}()
 	}()
 
 	go func() {
@@ -220,6 +222,13 @@ func TestActorPool_Start_InitFail(t *testing.T) {
 	testDone := make(chan interface{})
 	timeout := make(chan interface{})
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Error: an unexpected error occurred: %v", r)
+				testDone <- true
+			}
+		}()
+
 		pool := NewPool([]Worker{
 			NewAddOneActor(1*time.Millisecond, errors.New("Bad news.")),
 		})
@@ -229,12 +238,6 @@ func TestActorPool_Start_InitFail(t *testing.T) {
 			t.Error("Expected there to be an error in startup.")
 		}
 		testDone <- true
-
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("Error: an unexpected error occurred: %v", r)
-			}
-		}()
 	}()
 
 	go func() {
@@ -254,6 +257,13 @@ func TestActorPool_Execute(t *testing.T) {
 	timeout := make(chan interface{})
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Error: an unexpected error occurred: %v", r)
+				testDone <- true
+			}
+		}()
+
 		pool := NewPool([]Worker{
 			NewAddOneActor(1*time.Millisecond, nil),
 		})
@@ -283,11 +293,6 @@ func TestActorPool_Execute(t *testing.T) {
 		}
 		testDone <- true
 
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("Error: an unexpected error occurred: %v", r)
-			}
-		}()
 	}()
 
 	go func() {
@@ -366,6 +371,7 @@ func TestActorPool_ExecuteWithError(t *testing.T) {
 		defer func() {
 			if r := recover(); r != nil {
 				t.Errorf("Error: an unexpected error occurred: %v", r)
+				testDone <- true
 			}
 		}()
 
@@ -412,6 +418,7 @@ func TestActorPool_ExecuteWithPanic(t *testing.T) {
 		defer func() {
 			if r := recover(); r != nil {
 				t.Errorf("Error: an unexpected error occurred: %v", r)
+				testDone <- true
 			}
 		}()
 
@@ -462,6 +469,7 @@ func TestActorPool_ExecuteWithShutdownBeforePanic(t *testing.T) {
 		defer func() {
 			if r := recover(); r != nil {
 				t.Errorf("Error: an unexpected error occurred: %v", r)
+				testDone <- true
 			}
 		}()
 
