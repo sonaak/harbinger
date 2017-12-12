@@ -15,12 +15,7 @@ type ServerMeta struct {
 	Version   string    `env:"VERSION" json:"version"`
 }
 
-type Config struct {
-}
-
-func Setup(env goenv.EnvReader) (*App, error) {
-	flag.Parse()
-
+func MustGetServerMeta(env goenv.EnvReader) *ServerMeta {
 	marshaller := goenv.DefaultEnvMarshaler{
 		Environment: env,
 	}
@@ -28,27 +23,71 @@ func Setup(env goenv.EnvReader) (*App, error) {
 	meta := ServerMeta{}
 	marshalErr := marshaller.Unmarshal(&meta)
 	if marshalErr != nil {
-		return nil, marshalErr
+		panic(marshalErr)
 	}
 
+	return &meta
+}
+
+type Config struct {
+}
+
+func NewConfig(env goenv.EnvReader) *Config {
+	return &Config{}
+}
+
+func setupFlags() {
+	flag.Parse()
+}
+
+func Setup(env goenv.EnvReader) (*App, error) {
+	setupFlags()
+
+	config := NewConfig(env)
+	meta := MustGetServerMeta(env)
+	server := newWebServer(config, meta)
+
 	return &App{
-		Meta: &meta,
+		server,
 	}, nil
 }
 
+type webserver struct {
+	*gin.Engine
+	Meta *ServerMeta
+}
+
+
+func newWebServer(config *Config, meta *ServerMeta) *webserver {
+	engine := gin.New()
+	server := &webserver{
+		Engine: engine,
+		Meta: meta,
+	}
+
+	engine.GET("/meta", server.meta)
+	return server
+}
+
+func (server *webserver) meta(c *gin.Context) {
+	c.JSON(200, struct {
+		Meta *ServerMeta `json:"meta"`
+	}{
+		Meta: server.Meta,
+	})
+}
+
+func (server *webserver) Run() error {
+	return server.Engine.Run()
+}
+
 type App struct {
-	Config *Config
-	Meta   *ServerMeta
+	*webserver
 }
 
 func (app *App) Run() error {
 
-	r := gin.Default()
-	r.GET("/meta", func(c *gin.Context) {
-		c.JSON(200, app.Meta)
-	})
-
-	go r.Run()
+	go app.webserver.Run()
 
 	for range time.Tick(1 * time.Second) {
 		glog.Info("Printing hello world")

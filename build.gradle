@@ -152,3 +152,22 @@ task stopSparrow {
         }
     }
 }
+
+task restartSparrow {
+    dependsOn = ["stopSparrow", "sparrowImage"]
+    doLast {
+        exec {
+            workingDir "."
+            environment 'AWS_ACCOUNT_ID', sparrowAwsAccountId
+            commandLine 'docker-compose', 'up', '-d'
+        }
+    }
+}
+
+task vet {
+    doLast {
+        exec {
+            commandLine 'codeclimate', 'analyze'
+        }
+    }
+}
