@@ -130,6 +130,7 @@ func (pool *ActorPool) Execute(ops []Operation) <-chan Operation {
 	wg := sync.WaitGroup{}
 
 	for _, op := range ops {
+		pool.requestChan <- op
 		wg.Add(1)
 		go func(op Operation) {
 			defer func() {
@@ -140,7 +141,6 @@ func (pool *ActorPool) Execute(ops []Operation) <-chan Operation {
 				}
 			}()
 
-			pool.requestChan <- op
 			op.Wait()
 			output <- op
 			wg.Done()
