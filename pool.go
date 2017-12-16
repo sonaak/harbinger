@@ -206,6 +206,7 @@ func (pool *ActorPool) start() error {
 	// create brand new operations channel and close-once sema
 	pool.operationChan = make(chan Operation)
 	pool.closeOnce = &sync.Once{}
+	pool.execWg = &sync.WaitGroup{}
 
 	for _, worker := range pool.Workers {
 		if initErr := pool.initWorker(worker); initErr != nil {
@@ -309,7 +310,6 @@ func NewPool(workers []Worker) *ActorPool {
 	pool := ActorPool{
 		Workers:       workers,
 		reqChan:       make(chan poolreq),
-		execWg:        &sync.WaitGroup{},
 		state:         STOPPED,
 	}
 
