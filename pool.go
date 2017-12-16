@@ -11,7 +11,7 @@ import (
 // a request object or an object that represents a database read.
 // To capture the output, either publicly or privately set an output.
 //
-// When you are Done(), you would
+// The interface assumes that Wait() would
 type Operation interface {
 	IncrementTry()
 
@@ -111,7 +111,6 @@ type ActorPool struct {
 	closeOnce     *sync.Once
 }
 
-
 func (pool *ActorPool) restore(worker Worker) {
 	// TODO: do other restore-y things
 	pool.register(worker)
@@ -119,7 +118,7 @@ func (pool *ActorPool) restore(worker Worker) {
 
 func (pool *ActorPool) retryOperation(op Operation, previousAssignee Worker) {
 	req := RedriveRequest{
-		Operation: op,
+		Operation:        op,
 		PreviousAssignee: previousAssignee,
 	}
 
@@ -141,7 +140,6 @@ func (pool *ActorPool) assign(worker Worker, op Operation) {
 		op.Done()
 	}
 }
-
 
 func (pool *ActorPool) register(worker Worker) {
 	// In case there is a panic, let's restart the worker
@@ -166,7 +164,6 @@ func (pool *ActorPool) register(worker Worker) {
 	}
 }
 
-
 func (pool *ActorPool) initWorker(worker Worker) error {
 	initErr := worker.Init()
 
@@ -180,7 +177,6 @@ func (pool *ActorPool) initWorker(worker Worker) error {
 	pool.Shutdown()
 	return errors.Wrap(initErr, "unable to initialise worker")
 }
-
 
 func (pool *ActorPool) start() error {
 	// if the pool is already running, don't do anything
