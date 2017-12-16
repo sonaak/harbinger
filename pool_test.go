@@ -110,7 +110,7 @@ func timeout(f func(), d time.Duration) error {
 }
 
 func setupHappyPath() *ActorPool {
-	workers := []Worker {
+	workers := []Worker{
 		&addOneWorker{},
 		&addOneWorker{},
 	}
@@ -122,7 +122,7 @@ func TestActorPool_Start(t *testing.T) {
 	pool := setupHappyPath()
 
 	timeoutDuration := 1 * time.Second
-	timeoutErr := timeout(func(){
+	timeoutErr := timeout(func() {
 		err := pool.Start()
 		if err != nil {
 			t.Error("should not encounter any error in start")
@@ -154,7 +154,7 @@ func TestActorPool_Start_Idempotence(t *testing.T) {
 
 	timeoutErr := timeout(func() {
 		wg.Wait()
-	}, 1 * time.Second)
+	}, 1*time.Second)
 
 	if timeoutErr != nil {
 		t.Errorf("timed out waiting for 2x starts")
@@ -170,5 +170,38 @@ func TestActorPool_Start_Idempotence(t *testing.T) {
 				t.Errorf("expects init count 1; %d instead", initCount)
 			}
 		}
+	}
+}
+
+type initFailWorker struct {
+	*addOneWorker
+}
+
+func (worker *initFailWorker) Init() error {
+	return errors.New("fail to init")
+}
+
+func setupFailInitWorkerPool() *ActorPool {
+	workers := []Worker{
+		&addOneWorker{},
+		&initFailWorker{&addOneWorker{}},
+		&addOneWorker{},
+	}
+	return NewPool(workers)
+}
+
+func TestActorPool_Startup_InitFail(t *testing.T) {
+	pool := setupFailInitWorkerPool()
+	timeoutDuration := 2 * time.Second
+	timeoutErr := timeout(func() {
+		err := pool.Start()
+		if err == nil {
+			t.Errorf("start with bad worker should result in failure")
+		}
+
+	}, timeoutDuration)
+
+	if timeoutErr != nil {
+		t.Errorf("should not timeout after %s", timeoutDuration.String())
 	}
 }

@@ -59,8 +59,8 @@ const (
 	execute  reqtype = 2
 	redrive  reqtype = 3
 
-	STOPPED  uint32 = 0
-	RUNNING  uint32 = 2
+	STOPPED uint32 = 0
+	RUNNING uint32 = 2
 )
 
 type poolreq interface {
@@ -189,7 +189,7 @@ func (pool *ActorPool) initWorker(worker Worker) error {
 	// if there is any initialisation errors,
 	// we should shutdown the pool immediately so it can't
 	// be used
-	pool.Shutdown()
+	go pool.Shutdown()
 	return errors.Wrap(initErr, "unable to initialise worker")
 }
 
@@ -270,7 +270,9 @@ func (pool *ActorPool) listenToRequests() {
 		case *StartupRequest:
 			v.Error = pool.start()
 			v.Done()
-			pool.state = RUNNING
+			if v.Error == nil {
+				pool.state = RUNNING
+			}
 
 		case *ExecuteRequest:
 			pool.execWg.Add(1)
@@ -300,6 +302,7 @@ func NewPool(workers []Worker) *ActorPool {
 		Workers:       workers,
 		operationChan: make(chan Operation),
 		reqChan:       make(chan poolreq),
+		execWg:        &sync.WaitGroup{},
 		state:         STOPPED,
 	}
 
