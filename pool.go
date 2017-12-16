@@ -59,65 +59,77 @@ const (
 	execute  reqtype = 2
 	redrive  reqtype = 3
 
-	STOPPED  uint32 = 0
-	STARTING uint32 = 1
-	RUNNING  uint32 = 2
-	STOPPING uint32 = 4
+	stopped  uint32 = 0
+	starting uint32 = 1
+	running  uint32 = 2
+	stopping uint32 = 4
 )
 
 type poolreq interface {
 	Type() reqtype
 }
 
-type AsyncRequest struct {
+type asyncreq struct {
 	Error error
 
 	done chan interface{}
 }
 
-func (req *AsyncRequest) Wait() {
+func (req *asyncreq) Wait() {
 	for range req.done {
 	}
 }
 
-func (req *AsyncRequest) Done() {
+func (req *asyncreq) Done() {
 	close(req.done)
 }
 
-type StartupRequest struct {
-	AsyncRequest
+type startupReq struct {
+	asyncreq
 }
 
-func (req *StartupRequest) Type() reqtype {
+func (req *startupReq) Type() reqtype {
 	return startup
 }
 
-type ShutdownRequest bool
+type shutdownReq bool
 
-func (req ShutdownRequest) Type() reqtype {
+func (req shutdownReq) Type() reqtype {
 	return shutdown
 }
 
-type ExecuteRequest struct {
-	AsyncRequest
+type executeReq struct {
+	asyncreq
 	Operations []Operation
 	Output     chan<- Operation
 }
 
-func (req *ExecuteRequest) Type() reqtype {
+func (req *executeReq) Type() reqtype {
 	return execute
 }
 
-type RedriveRequest struct {
-	AsyncRequest
+type redriveReq struct {
+	asyncreq
 	PreviousAssignee Worker
 	Operation        Operation
 }
 
-func (req *RedriveRequest) Type() reqtype {
+func (req *redriveReq) Type() reqtype {
 	return redrive
 }
 
+// ActorPool - represents a pool of (possibly heterogeneous) Workers who will read
+// messages off of a queue and process them. The idea here is that the messages
+// without curation and dispatch may go through several passes before being handled
+// by the correct worker.
+//
+// What the worker pool does, then, is to provide basic controls around spinning up
+// the worker, assigning tasks to the worker, keeping the workers up, and shutting
+// down the pool when everything is done.
+//
+// It exposes just three methods: Start, Execute, Shutdown. With these three methods
+// we should be able to push tasks to initialise the workers, push tasks to them, and
+// reclaim resources when done.
 type ActorPool struct {
 	Workers []Worker
 
@@ -134,7 +146,7 @@ func (pool *ActorPool) restore(worker Worker) {
 }
 
 func (pool *ActorPool) retryOperation(op Operation, previousAssignee Worker) {
-	req := RedriveRequest{
+	req := redriveReq{
 		Operation:        op,
 		PreviousAssignee: previousAssignee,
 	}
@@ -197,11 +209,11 @@ func (pool *ActorPool) initWorker(worker Worker) error {
 
 func (pool *ActorPool) start() error {
 	// if the pool is already running, don't do anything
-	if pool.state == RUNNING || pool.state == STARTING {
+	if pool.state == running || pool.state == starting {
 		return nil
 	}
 
-	pool.state = STARTING
+	pool.state = starting
 
 	// create brand new operations channel and close-once sema
 	pool.operationChan = make(chan Operation)
@@ -233,7 +245,7 @@ func waitTillCompleted(wg *sync.WaitGroup, op Operation, output chan<- Operation
 }
 
 func (pool *ActorPool) enqueue(ops []Operation, output chan<- Operation) error {
-	if pool.state != RUNNING {
+	if pool.state != running {
 		return errors.New("error: enqueuing messages on non-running actor pool")
 	}
 
@@ -254,11 +266,11 @@ func (pool *ActorPool) enqueue(ops []Operation, output chan<- Operation) error {
 
 func (pool *ActorPool) shutdown() {
 	// if the pool is already shutdown, just return
-	if pool.state == STOPPED {
+	if pool.state == stopped {
 		return
 	}
 
-	pool.state = STOPPING
+	pool.state = stopping
 	// otherwise, close the operation channel in a once
 	pool.closeOnce.Do(func() {
 		close(pool.operationChan)
@@ -266,7 +278,7 @@ func (pool *ActorPool) shutdown() {
 }
 
 func (pool *ActorPool) redrive(op Operation, previousWorker Worker) {
-	if pool.state != RUNNING {
+	if pool.state != running {
 		pool.assign(previousWorker, op)
 	}
 
@@ -277,14 +289,14 @@ func (pool *ActorPool) listenToRequests() {
 	for req := range pool.reqChan {
 		switch v := req.(type) {
 
-		case *StartupRequest:
+		case *startupReq:
 			v.Error = pool.start()
 			v.Done()
 			if v.Error == nil {
-				pool.state = RUNNING
+				pool.state = running
 			}
 
-		case *ExecuteRequest:
+		case *executeReq:
 			pool.execWg.Add(1)
 			go func() {
 				v.Error = pool.enqueue(v.Operations, v.Output)
@@ -292,25 +304,29 @@ func (pool *ActorPool) listenToRequests() {
 				pool.execWg.Done()
 			}()
 
-		case *RedriveRequest:
+		case *redriveReq:
 			pool.redrive(v.Operation, v.PreviousAssignee)
 
-		case ShutdownRequest:
+		case shutdownReq:
 			// wait till all the previous executes have completed
 			pool.execWg.Wait()
 
 			// then stop everything
 			pool.shutdown()
-			pool.state = STOPPED
+			pool.state = stopped
 		}
 	}
 }
 
+// NewPool - creates a new pool of workers. By passing it a list of
+// workers, each will be initialised, and registered to receive messages
+// on a queue, and restarted when some error occurs. Each will be shutdown
+// appropriately when the shutdown sequence is called.
 func NewPool(workers []Worker) *ActorPool {
 	pool := ActorPool{
-		Workers:       workers,
-		reqChan:       make(chan poolreq),
-		state:         STOPPED,
+		Workers: workers,
+		reqChan: make(chan poolreq),
+		state:   stopped,
 	}
 
 	go pool.listenToRequests()
@@ -318,8 +334,8 @@ func NewPool(workers []Worker) *ActorPool {
 }
 
 func (pool *ActorPool) Start() error {
-	req := &StartupRequest{
-		AsyncRequest{
+	req := &startupReq{
+		asyncreq{
 			done: make(chan interface{}),
 		},
 	}
@@ -331,12 +347,12 @@ func (pool *ActorPool) Start() error {
 }
 
 func (pool *ActorPool) Shutdown() {
-	pool.reqChan <- ShutdownRequest(true)
+	pool.reqChan <- shutdownReq(true)
 }
 
 func (pool *ActorPool) Execute(ops []Operation) (<-chan Operation, error) {
 	output := make(chan Operation, len(ops))
-	executeReq := ExecuteRequest{
+	executeReq := executeReq{
 		Operations: ops,
 		Output:     output,
 	}
