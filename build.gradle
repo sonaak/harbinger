@@ -168,7 +168,7 @@ task restartSparrow {
 task unitTest {
     doLast {
         exec {
-            commandLine 'go', 'test', '-coverprofile', 'cover.out'
+            commandLine 'go', 'test', '-race', '-coverprofile', 'cover.out'
         }
         exec {
             commandLine 'go', 'tool', 'cover',
