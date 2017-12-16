@@ -294,7 +294,11 @@ func NewPool(workers []Worker) *ActorPool {
 }
 
 func (pool *ActorPool) Start() error {
-	req := &StartupRequest{}
+	req := &StartupRequest{
+		AsyncRequest{
+			done: make(chan interface{}),
+		},
+	}
 	pool.reqChan <- req
 
 	// wait till the request is done
