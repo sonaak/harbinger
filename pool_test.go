@@ -49,7 +49,7 @@ type addOneWorker struct {
 }
 
 func (worker *addOneWorker) Init() error {
-	worker.initCount += 1
+	worker.initCount++
 	return nil
 }
 
@@ -196,7 +196,8 @@ func TestActorPool_Startup_InitFail(t *testing.T) {
 		}
 
 		// this channel should be closed
-		for range pool.operationChan {}
+		for range pool.operationChan {
+		}
 	}, timeoutDuration)
 
 	if timeoutErr != nil {
