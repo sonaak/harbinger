@@ -59,9 +59,9 @@ const (
 	execute  reqtype = 2
 	redrive  reqtype = 3
 
-	STOPPED uint32 = 0
-	STARTED uint32 = 1
-	RUNNING uint32 = 2
+	STOPPED  uint32 = 0
+	STARTING uint32 = 1
+	RUNNING  uint32 = 2
 	STOPPING uint32 = 4
 )
 
@@ -197,11 +197,16 @@ func (pool *ActorPool) initWorker(worker Worker) error {
 
 func (pool *ActorPool) start() error {
 	// if the pool is already running, don't do anything
-	if pool.state == RUNNING || pool.state == STARTED {
+	if pool.state == RUNNING || pool.state == STARTING {
 		return nil
 	}
 
-	pool.state = STARTED
+	pool.state = STARTING
+
+	// create brand new operations channel and close-once sema
+	pool.operationChan = make(chan Operation)
+	pool.closeOnce = &sync.Once{}
+
 	for _, worker := range pool.Workers {
 		if initErr := pool.initWorker(worker); initErr != nil {
 			return initErr
@@ -303,10 +308,8 @@ func (pool *ActorPool) listenToRequests() {
 func NewPool(workers []Worker) *ActorPool {
 	pool := ActorPool{
 		Workers:       workers,
-		operationChan: make(chan Operation),
 		reqChan:       make(chan poolreq),
 		execWg:        &sync.WaitGroup{},
-		closeOnce:     &sync.Once{},
 		state:         STOPPED,
 	}
 
