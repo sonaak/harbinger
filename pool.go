@@ -28,9 +28,22 @@ type Operation interface {
 	Done()
 }
 
+// Worker - an interface representing a client or processor that
+// handles requests (operations).
 //
+// For example, if you want to define a pool of map/reduce processes
+// then a worker may be a logical unit (consisting of several logical
+// units) that processes a request. If you want to define a pool of
+// database clients, then a worker may be some struct that accepts a
+// database query for an op, and returns the seeker for the row.
 //
+// Such a client/processor should know how to handle errors and clean
+// up. The main function here would be its Process function which
+// processes a certain operation and returns if it failed and if the
+// operation should be retried.
 type Worker interface {
+
+	// Init -
 	Init() error
 	Process(op Operation) (bool, error)
 	HandleError(error, Operation)
