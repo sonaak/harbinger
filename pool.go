@@ -5,6 +5,13 @@ import (
 	"sync"
 )
 
+// Operation - an interface representing a unit of task to be
+// done by a worker. For example, if you want to define a pool of
+// http requests or database readers, then your operation can be
+// a request object or an object that represents a database read.
+// To capture the output, either publicly or privately set an output.
+//
+// When you are Done(), you would
 type Operation interface {
 	IncrementTry()
 
