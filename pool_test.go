@@ -42,12 +42,14 @@ func (op *addOneOperation) Done() {
 }
 
 type addOneWorker struct {
+	initCount  uint
 	id         uint
 	handledErr error
 	handledOp  Operation
 }
 
 func (worker *addOneWorker) Init() error {
+	worker.initCount += 1
 	return nil
 }
 
@@ -107,12 +109,17 @@ func timeout(f func(), d time.Duration) error {
 	}
 }
 
-func TestActorPool_Start(t *testing.T) {
+func setupHappyPath() *ActorPool {
 	workers := []Worker {
 		&addOneWorker{},
 		&addOneWorker{},
 	}
-	pool := NewPool(workers)
+	return NewPool(workers)
+}
+
+// Tests that starting the worker pool is going to be OK
+func TestActorPool_Start(t *testing.T) {
+	pool := setupHappyPath()
 
 	timeoutDuration := 1 * time.Second
 	timeoutErr := timeout(func(){
@@ -124,5 +131,44 @@ func TestActorPool_Start(t *testing.T) {
 
 	if timeoutErr != nil {
 		t.Errorf("should not timeout after %s", timeoutDuration.String())
+	}
+}
+
+func parallelTestStart(pool *ActorPool, wg *sync.WaitGroup, t *testing.T) {
+	err := pool.Start()
+	if err != nil {
+		t.Errorf("should not encounter any error in start")
+	}
+	wg.Done()
+}
+
+// Tests that starting the worker pool is idempotent
+func TestActorPool_Start_Idempotence(t *testing.T) {
+	pool := setupHappyPath()
+
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+	go parallelTestStart(pool, &wg, t)
+	go parallelTestStart(pool, &wg, t)
+	go parallelTestStart(pool, &wg, t)
+
+	timeoutErr := timeout(func() {
+		wg.Wait()
+	}, 1 * time.Second)
+
+	if timeoutErr != nil {
+		t.Errorf("timed out waiting for 2x starts")
+	}
+
+	// assert that each of the workers have only been
+	// initialised once
+	for _, w := range pool.Workers {
+		switch worker := w.(type) {
+		case *addOneWorker:
+			initCount := worker.initCount
+			if initCount != 1 {
+				t.Errorf("expects init count 1; %d instead", initCount)
+			}
+		}
 	}
 }

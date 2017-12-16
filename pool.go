@@ -60,7 +60,6 @@ const (
 	redrive  reqtype = 3
 
 	STOPPED  uint32 = 0
-	STARTING uint32 = 1
 	RUNNING  uint32 = 2
 )
 
@@ -269,7 +268,6 @@ func (pool *ActorPool) listenToRequests() {
 		switch v := req.(type) {
 
 		case *StartupRequest:
-			pool.state = STARTING
 			v.Error = pool.start()
 			v.Done()
 			pool.state = RUNNING
