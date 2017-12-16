@@ -181,17 +181,13 @@ func (worker *initFailWorker) Init() error {
 	return errors.New("fail to init")
 }
 
-func setupFailInitWorkerPool() *ActorPool {
+func TestActorPool_Startup_InitFail(t *testing.T) {
 	workers := []Worker{
 		&addOneWorker{},
 		&initFailWorker{&addOneWorker{}},
 		&addOneWorker{},
 	}
-	return NewPool(workers)
-}
-
-func TestActorPool_Startup_InitFail(t *testing.T) {
-	pool := setupFailInitWorkerPool()
+	pool := NewPool(workers)
 	timeoutDuration := 2 * time.Second
 	timeoutErr := timeout(func() {
 		err := pool.Start()
