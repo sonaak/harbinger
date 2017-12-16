@@ -11,7 +11,8 @@ import (
 // a request object or an object that represents a database read.
 // To capture the output, either publicly or privately set an output.
 //
-// The interface assumes that Wait() would
+// The interface assumes that Wait() would block until the operation
+// is Done(). Otherwise, the operation may be a bit unpredictable.
 type Operation interface {
 	IncrementTry()
 
@@ -27,6 +28,8 @@ type Operation interface {
 	Done()
 }
 
+//
+//
 type Worker interface {
 	Init() error
 	Process(op Operation) (bool, error)

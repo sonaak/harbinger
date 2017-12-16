@@ -110,6 +110,7 @@ func timeout(f func(), d time.Duration) error {
 func TestActorPool_Start(t *testing.T) {
 	workers := []Worker {
 		&addOneWorker{},
+		&addOneWorker{},
 	}
 	pool := NewPool(workers)
 
