@@ -60,7 +60,9 @@ const (
 	redrive  reqtype = 3
 
 	STOPPED uint32 = 0
+	STARTED uint32 = 1
 	RUNNING uint32 = 2
+	STOPPING uint32 = 4
 )
 
 type poolreq interface {
@@ -195,10 +197,11 @@ func (pool *ActorPool) initWorker(worker Worker) error {
 
 func (pool *ActorPool) start() error {
 	// if the pool is already running, don't do anything
-	if pool.state == RUNNING {
+	if pool.state == RUNNING || pool.state == STARTED {
 		return nil
 	}
 
+	pool.state = STARTED
 	for _, worker := range pool.Workers {
 		if initErr := pool.initWorker(worker); initErr != nil {
 			return initErr
@@ -249,6 +252,7 @@ func (pool *ActorPool) shutdown() {
 		return
 	}
 
+	pool.state = STOPPING
 	// otherwise, close the operation channel in a once
 	pool.closeOnce.Do(func() {
 		close(pool.operationChan)
@@ -290,9 +294,8 @@ func (pool *ActorPool) listenToRequests() {
 			pool.execWg.Wait()
 
 			// then stop everything
-			pool.state = STOPPED
 			pool.shutdown()
-
+			pool.state = STOPPED
 		}
 	}
 }
@@ -303,6 +306,7 @@ func NewPool(workers []Worker) *ActorPool {
 		operationChan: make(chan Operation),
 		reqChan:       make(chan poolreq),
 		execWg:        &sync.WaitGroup{},
+		closeOnce:     &sync.Once{},
 		state:         STOPPED,
 	}
 

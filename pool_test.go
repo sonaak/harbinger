@@ -195,6 +195,8 @@ func TestActorPool_Startup_InitFail(t *testing.T) {
 			t.Errorf("start with bad worker should result in failure")
 		}
 
+		// this channel should be closed
+		for range pool.operationChan {}
 	}, timeoutDuration)
 
 	if timeoutErr != nil {
