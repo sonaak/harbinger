@@ -231,7 +231,7 @@ func TestActorPool_Execute(t *testing.T) {
 					}
 
 				default:
-					t.Error("expects all output type to be")
+					t.Error("expects all output type to be addOneOperation")
 				}
 			}
 		},
