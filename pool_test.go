@@ -207,10 +207,7 @@ func TestActorPool_Startup_InitFail(t *testing.T) {
 
 
 func TestActorPool_Execute(t *testing.T) {
-	workers := []Worker{
-		&addOneWorker{},
-	}
-	pool := NewPool(workers)
+	pool := setupHappyPath()
 	pool.Start()
 
 	ops := []Operation {
