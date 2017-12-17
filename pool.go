@@ -333,6 +333,7 @@ func NewPool(workers []Worker) *WorkerPool {
 		Workers: workers,
 		reqChan: make(chan poolreq),
 		state:   stopped,
+		execWg:  &sync.WaitGroup{},
 	}
 
 	go pool.listenToRequests()

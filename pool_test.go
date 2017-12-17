@@ -212,6 +212,7 @@ func TestActorPool_Execute(t *testing.T) {
 
 	ops := []Operation {
 		newAddOneOperation(1, 1 * time.Millisecond),
+		newAddOneOperation(6, 3 * time.Millisecond),
 	}
 
 	resp, err := pool.Execute(ops)
@@ -241,4 +242,22 @@ func TestActorPool_Execute(t *testing.T) {
 	if timeoutErr != nil {
 		t.Error("should not timeout after 1s")
 	}
+}
+
+
+func TestActorPool_ExecuteWithoutStart(t *testing.T) {
+	pool := setupHappyPath()
+	ops := []Operation {
+		newAddOneOperation(1, 1 * time.Millisecond),
+		newAddOneOperation(6, 3 * time.Millisecond),
+	}
+	defer pool.Shutdown()
+
+	timeout(func(){
+		_, err := pool.Execute(ops)
+		if err == nil {
+			t.Error("expects error when executing against an unstarted pool")
+		}
+	}, 1 * time.Second)
+
 }
