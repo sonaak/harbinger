@@ -123,7 +123,7 @@ func (req *redriveReq) Type() reqtype {
 	return redrive
 }
 
-// ActorPool - represents a pool of (possibly heterogeneous) Workers who will read
+// WorkerPool - represents a pool of (possibly heterogeneous) Workers who will read
 // messages off of a queue and process them. The idea here is that the messages
 // without curation and dispatch may go through several passes before being handled
 // by the correct worker.
@@ -135,7 +135,7 @@ func (req *redriveReq) Type() reqtype {
 // It exposes just three methods: Start, Execute, Shutdown. With these three methods
 // we should be able to push tasks to initialise the workers, push tasks to them, and
 // reclaim resources when done.
-type ActorPool struct {
+type WorkerPool struct {
 	Workers []Worker
 
 	operationChan chan Operation
@@ -145,12 +145,12 @@ type ActorPool struct {
 	closeOnce     *sync.Once
 }
 
-func (pool *ActorPool) restore(worker Worker) {
+func (pool *WorkerPool) restore(worker Worker) {
 	// TODO: do other restore-y things
 	pool.runWorkerAsListener(worker)
 }
 
-func (pool *ActorPool) retryOperation(op Operation, previousAssignee Worker) {
+func (pool *WorkerPool) retryOperation(op Operation, previousAssignee Worker) {
 	req := redriveReq{
 		Operation:        op,
 		PreviousAssignee: previousAssignee,
@@ -159,7 +159,7 @@ func (pool *ActorPool) retryOperation(op Operation, previousAssignee Worker) {
 	pool.reqChan <- &req
 }
 
-func (pool *ActorPool) assign(worker Worker, op Operation) {
+func (pool *WorkerPool) assign(worker Worker, op Operation) {
 	retry, err := worker.Process(op)
 	if err == nil {
 		op.Done()
@@ -175,7 +175,7 @@ func (pool *ActorPool) assign(worker Worker, op Operation) {
 	}
 }
 
-func (pool *ActorPool) runWorkerAsListener(worker Worker) {
+func (pool *WorkerPool) runWorkerAsListener(worker Worker) {
 	// In case there is a panic, let's restart the worker
 	// but otherwise, just clean up the worker, however it
 	// knows how
@@ -198,7 +198,7 @@ func (pool *ActorPool) runWorkerAsListener(worker Worker) {
 	}
 }
 
-func (pool *ActorPool) initWorker(worker Worker) error {
+func (pool *WorkerPool) initWorker(worker Worker) error {
 	initErr := worker.Init()
 
 	if initErr == nil {
@@ -212,7 +212,7 @@ func (pool *ActorPool) initWorker(worker Worker) error {
 	return errors.Wrap(initErr, "unable to initialise worker")
 }
 
-func (pool *ActorPool) start() error {
+func (pool *WorkerPool) start() error {
 	// if the pool is already running, don't do anything
 	if pool.state == running || pool.state == starting {
 		return nil
@@ -249,7 +249,7 @@ func waitTillCompleted(wg *sync.WaitGroup, op Operation, output chan<- Operation
 	wg.Done()
 }
 
-func (pool *ActorPool) enqueue(ops []Operation, output chan<- Operation) error {
+func (pool *WorkerPool) enqueue(ops []Operation, output chan<- Operation) error {
 	if pool.state != running {
 		close(output)
 		return errors.New("error: enqueuing messages on non-running actor pool")
@@ -270,7 +270,7 @@ func (pool *ActorPool) enqueue(ops []Operation, output chan<- Operation) error {
 	return nil
 }
 
-func (pool *ActorPool) shutdown() {
+func (pool *WorkerPool) shutdown() {
 	// if the pool is already shutdown, just return
 	if pool.state == stopped {
 		return
@@ -283,7 +283,7 @@ func (pool *ActorPool) shutdown() {
 	})
 }
 
-func (pool *ActorPool) redrive(op Operation, previousWorker Worker) {
+func (pool *WorkerPool) redrive(op Operation, previousWorker Worker) {
 	if pool.state != running {
 		pool.assign(previousWorker, op)
 	}
@@ -291,7 +291,7 @@ func (pool *ActorPool) redrive(op Operation, previousWorker Worker) {
 	pool.operationChan <- op
 }
 
-func (pool *ActorPool) listenToRequests() {
+func (pool *WorkerPool) listenToRequests() {
 	for req := range pool.reqChan {
 		switch v := req.(type) {
 
@@ -328,8 +328,8 @@ func (pool *ActorPool) listenToRequests() {
 // workers, each will be initialised, and registered to receive messages
 // on a queue, and restarted when some error occurs. Each will be shutdown
 // appropriately when the shutdown sequence is called.
-func NewPool(workers []Worker) *ActorPool {
-	pool := ActorPool{
+func NewPool(workers []Worker) *WorkerPool {
+	pool := WorkerPool{
 		Workers: workers,
 		reqChan: make(chan poolreq),
 		state:   stopped,
@@ -341,7 +341,7 @@ func NewPool(workers []Worker) *ActorPool {
 
 // Start - start the pool by setting up the workers to listen to the
 // requests. A pool that isn't started cannot process any requests.
-func (pool *ActorPool) Start() error {
+func (pool *WorkerPool) Start() error {
 	req := &startupReq{
 		asyncreq{
 			done: make(chan interface{}),
@@ -359,7 +359,7 @@ func (pool *ActorPool) Start() error {
 //
 // This will prevent all other requests from being executed. This does
 // not affect any requests that have begun processing.
-func (pool *ActorPool) Shutdown() {
+func (pool *WorkerPool) Shutdown() {
 	pool.reqChan <- shutdownReq(true)
 }
 
@@ -368,7 +368,7 @@ func (pool *ActorPool) Shutdown() {
 // successfully processed or failed.
 //
 // If an error is returned, the channel is closed.
-func (pool *ActorPool) Execute(ops []Operation) (<-chan Operation, error) {
+func (pool *WorkerPool) Execute(ops []Operation) (<-chan Operation, error) {
 	output := make(chan Operation, len(ops))
 	executeReq := executeReq{
 		Operations: ops,
