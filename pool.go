@@ -81,6 +81,11 @@ func (req *asyncreq) Wait() {
 }
 
 func (req *asyncreq) Done() {
+	defer func() {
+		if r := recover(); r != nil {
+		}
+	}()
+
 	close(req.done)
 }
 
@@ -142,7 +147,7 @@ type ActorPool struct {
 
 func (pool *ActorPool) restore(worker Worker) {
 	// TODO: do other restore-y things
-	pool.register(worker)
+	pool.runWorkerAsListener(worker)
 }
 
 func (pool *ActorPool) retryOperation(op Operation, previousAssignee Worker) {
@@ -170,7 +175,7 @@ func (pool *ActorPool) assign(worker Worker, op Operation) {
 	}
 }
 
-func (pool *ActorPool) register(worker Worker) {
+func (pool *ActorPool) runWorkerAsListener(worker Worker) {
 	// In case there is a panic, let's restart the worker
 	// but otherwise, just clean up the worker, however it
 	// knows how
@@ -224,7 +229,7 @@ func (pool *ActorPool) start() error {
 		if initErr := pool.initWorker(worker); initErr != nil {
 			return initErr
 		}
-		go pool.register(worker)
+		go pool.runWorkerAsListener(worker)
 	}
 
 	return nil
@@ -246,6 +251,7 @@ func waitTillCompleted(wg *sync.WaitGroup, op Operation, output chan<- Operation
 
 func (pool *ActorPool) enqueue(ops []Operation, output chan<- Operation) error {
 	if pool.state != running {
+		close(output)
 		return errors.New("error: enqueuing messages on non-running actor pool")
 	}
 
@@ -333,6 +339,8 @@ func NewPool(workers []Worker) *ActorPool {
 	return &pool
 }
 
+// Start - start the pool by setting up the workers to listen to the
+// requests. A pool that isn't started cannot process any requests.
 func (pool *ActorPool) Start() error {
 	req := &startupReq{
 		asyncreq{
@@ -346,15 +354,28 @@ func (pool *ActorPool) Start() error {
 	return req.Error
 }
 
+// Shutdown - shuts down the actor pool so that (some of) its resources
+// can be reused, and the workers will be notified to shutdown.
+//
+// This will prevent all other requests from being executed. This does
+// not affect any requests that have begun processing.
 func (pool *ActorPool) Shutdown() {
 	pool.reqChan <- shutdownReq(true)
 }
 
+// Execute - executes a collection of operations (requests). The return
+// is a channel that is closed when all the operations have either been
+// successfully processed or failed.
+//
+// If an error is returned, the channel is closed.
 func (pool *ActorPool) Execute(ops []Operation) (<-chan Operation, error) {
 	output := make(chan Operation, len(ops))
 	executeReq := executeReq{
 		Operations: ops,
 		Output:     output,
+		asyncreq: asyncreq{
+			done: make(chan interface{}),
+		},
 	}
 	pool.reqChan <- &executeReq
 	executeReq.Wait()
