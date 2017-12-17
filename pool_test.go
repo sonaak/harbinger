@@ -212,7 +212,6 @@ func TestActorPool_Execute(t *testing.T) {
 
 	ops := []Operation {
 		newAddOneOperation(1, 1 * time.Millisecond),
-		newAddOneOperation(6, 3 * time.Millisecond),
 	}
 
 	resp, err := pool.Execute(ops)
@@ -222,7 +221,19 @@ func TestActorPool_Execute(t *testing.T) {
 
 	timeoutErr := timeout(
 		func(){
-			for range resp {}
+			for op := range resp {
+				switch v := op.(type) {
+				case *addOneOperation:
+					if v.Output != v.Input + 1 {
+						t.Errorf("expects output to be %d; actual: %d",
+							v.Input + 1, v.Output,
+						)
+					}
+
+				default:
+					t.Error("expects all output type to be")
+				}
+			}
 		},
 		1 * time.Second,
 	)
