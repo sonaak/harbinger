@@ -109,7 +109,7 @@ func timeout(f func(), d time.Duration) error {
 	}
 }
 
-func setupHappyPath() *ActorPool {
+func setupHappyPath() *WorkerPool {
 	workers := []Worker{
 		&addOneWorker{},
 		&addOneWorker{},
@@ -134,7 +134,7 @@ func TestActorPool_Start(t *testing.T) {
 	}
 }
 
-func parallelTestStart(pool *ActorPool, wg *sync.WaitGroup, t *testing.T) {
+func parallelTestStart(pool *WorkerPool, wg *sync.WaitGroup, t *testing.T) {
 	err := pool.Start()
 	if err != nil {
 		t.Errorf("should not encounter any error in start")
