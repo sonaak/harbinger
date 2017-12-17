@@ -204,3 +204,33 @@ func TestActorPool_Startup_InitFail(t *testing.T) {
 		t.Errorf("should not timeout after %s", timeoutDuration.String())
 	}
 }
+
+
+func TestActorPool_Execute(t *testing.T) {
+	workers := []Worker{
+		&addOneWorker{},
+	}
+	pool := NewPool(workers)
+	pool.Start()
+
+	ops := []Operation {
+		newAddOneOperation(1, 1 * time.Millisecond),
+		newAddOneOperation(6, 3 * time.Millisecond),
+	}
+
+	resp, err := pool.Execute(ops)
+	if err != nil {
+		t.Errorf("should not error out: %v", err)
+	}
+
+	timeoutErr := timeout(
+		func(){
+			for range resp {}
+		},
+		1 * time.Second,
+	)
+
+	if timeoutErr != nil {
+		t.Error("should not timeout after 1s")
+	}
+}
