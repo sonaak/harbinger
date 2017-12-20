@@ -383,6 +383,15 @@ func (pool *WorkerPool) Execute(ops []Operation) (<-chan Operation, error) {
 	return output, executeReq.Error
 }
 
+// Wrap - wraps an input stream into another output stream. The idea here
+// is if the client has a streaming input, then rather than forcing clients
+// to batch and executing using Execute, they should be able to fire directly into
+// an input channel and we will handle processing the operations and then as
+// operations are done, putting them onto the output channel.
+//
+// When the input stream is closed, the output stream may not close. The output
+// stream is only closed when all the inbound requests have been handled, either
+// successfully or unsuccessfully (but marked as done).
 func (pool *WorkerPool) Wrap(inStream <- chan Operation) <-chan Operation {
 	outStream := make(chan Operation)
 	go func() {
