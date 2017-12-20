@@ -382,3 +382,26 @@ func (pool *WorkerPool) Execute(ops []Operation) (<-chan Operation, error) {
 	executeReq.Wait()
 	return output, executeReq.Error
 }
+
+func (pool *WorkerPool) Wrap(inStream <- chan Operation) <-chan Operation {
+	outStream := make(chan Operation)
+	go func() {
+		wg := sync.WaitGroup {}
+		for op := range inStream {
+
+			// TODO: make this single (right now, silently ditching chan and err)
+			pool.Execute([]Operation{ op })
+			wg.Add(1)
+			go func() {
+				op.Wait()
+				outStream <- op
+				wg.Done()
+			}()
+		}
+
+		wg.Wait()
+		close(outStream)
+	}()
+
+	return outStream
+}
