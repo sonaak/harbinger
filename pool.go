@@ -58,6 +58,7 @@ const (
 	startup  reqtype = 1
 	execute  reqtype = 2
 	redrive  reqtype = 3
+	wrap     reqtype = 4
 
 	stopped  uint32 = 0
 	starting uint32 = 1
@@ -111,6 +112,16 @@ type executeReq struct {
 
 func (req *executeReq) Type() reqtype {
 	return execute
+}
+
+type wrapStreamReq struct {
+	asyncreq
+	Input <-chan Operation
+	Output chan Operation
+}
+
+func (req *wrapStreamReq) Type() reqtype {
+	return wrap
 }
 
 type redriveReq struct {
@@ -313,6 +324,15 @@ func (pool *WorkerPool) listenToRequests() {
 		case *redriveReq:
 			pool.redrive(v.Operation, v.PreviousAssignee)
 
+		case *wrapStreamReq:
+			pool.execWg.Add(1)
+			go func() {
+				outStream, err := pool.wrapStream(v.Input, pool.execWg)
+				v.Error = err
+				v.Output = outStream
+				v.Done()
+			}()
+
 		case shutdownReq:
 			// wait till all the previous executes have completed
 			pool.execWg.Wait()
@@ -383,6 +403,35 @@ func (pool *WorkerPool) Execute(ops []Operation) (<-chan Operation, error) {
 	return output, executeReq.Error
 }
 
+func (pool *WorkerPool) wrapStream(inStream <-chan Operation, wg *sync.WaitGroup) (chan Operation, error) {
+	outStream := make(chan Operation)
+	if pool.state != running {
+		close(outStream)
+		return outStream, errors.New("pool not running; stream will never be processed")
+	}
+
+	go func() {
+		taskWg := sync.WaitGroup {}
+		for op := range inStream {
+			// TODO: replace this with a single execute
+			pool.Execute([]Operation{ op })
+			taskWg.Add(1)
+
+			go func(op Operation, wg *sync.WaitGroup) {
+				op.Wait()
+				outStream <- op
+				wg.Done()
+			}(op, wg)
+		}
+
+		taskWg.Wait()
+		wg.Done()
+		close(outStream)
+	}()
+
+	return outStream, nil
+}
+
 // Wrap - wraps an input stream into another output stream. The idea here
 // is if the client has a streaming input, then rather than forcing clients
 // to batch and executing using Execute, they should be able to fire directly into
@@ -392,25 +441,14 @@ func (pool *WorkerPool) Execute(ops []Operation) (<-chan Operation, error) {
 // When the input stream is closed, the output stream may not close. The output
 // stream is only closed when all the inbound requests have been handled, either
 // successfully or unsuccessfully (but marked as done).
-func (pool *WorkerPool) Wrap(inStream <- chan Operation) <-chan Operation {
-	outStream := make(chan Operation)
-	go func() {
-		wg := sync.WaitGroup {}
-		for op := range inStream {
-
-			// TODO: make this single (right now, silently ditching chan and err)
-			pool.Execute([]Operation{ op })
-			wg.Add(1)
-			go func() {
-				op.Wait()
-				outStream <- op
-				wg.Done()
-			}()
-		}
-
-		wg.Wait()
-		close(outStream)
-	}()
-
-	return outStream
+func (pool *WorkerPool) Wrap(inStream <- chan Operation) (<-chan Operation, error) {
+	req := wrapStreamReq{
+		Input: inStream,
+		asyncreq: asyncreq{
+			done: make(chan interface{}),
+		},
+	}
+	pool.reqChan <- &req
+	req.Wait()
+	return req.Output, req.Error
 }
