@@ -59,6 +59,7 @@ const (
 	execute  reqtype = 2
 	redrive  reqtype = 3
 	wrap     reqtype = 4
+	dosingle reqtype = 5
 
 	stopped  uint32 = 0
 	starting uint32 = 1
@@ -114,6 +115,17 @@ func (req *executeReq) Type() reqtype {
 	return execute
 }
 
+type doSingleReq struct {
+	asyncreq
+	Input Operation
+}
+
+
+func (doSingleReq) Type() reqtype {
+	return dosingle
+}
+
+
 type wrapStreamReq struct {
 	asyncreq
 	Input <-chan Operation
@@ -123,6 +135,7 @@ type wrapStreamReq struct {
 func (req *wrapStreamReq) Type() reqtype {
 	return wrap
 }
+
 
 type redriveReq struct {
 	asyncreq
@@ -281,6 +294,15 @@ func (pool *WorkerPool) enqueue(ops []Operation, output chan<- Operation) error 
 	return nil
 }
 
+func (pool *WorkerPool) do(op Operation) error {
+	if pool.state != running {
+		return errors.New("error: enqueuing message on non-running actor pool")
+	}
+
+	pool.operationChan <- op
+	return nil
+}
+
 func (pool *WorkerPool) shutdown() {
 	// if the pool is already shutdown, just return
 	if pool.state == stopped {
@@ -317,6 +339,14 @@ func (pool *WorkerPool) listenToRequests() {
 			pool.execWg.Add(1)
 			go func() {
 				v.Error = pool.enqueue(v.Operations, v.Output)
+				v.Done()
+				pool.execWg.Done()
+			}()
+
+		case *doSingleReq:
+			pool.execWg.Add(1)
+			go func() {
+				v.Error = pool.do(v.Input)
 				v.Done()
 				pool.execWg.Done()
 			}()
@@ -403,6 +433,48 @@ func (pool *WorkerPool) Execute(ops []Operation) (<-chan Operation, error) {
 	return output, executeReq.Error
 }
 
+
+func (pool *WorkerPool) Do(op Operation) error {
+	doSingleReq := doSingleReq {
+		Input: op,
+	}
+
+	pool.reqChan <- &doSingleReq
+	doSingleReq.Wait()
+	return doSingleReq.Error
+}
+
+func (pool *WorkerPool) pipe(inStream <-chan Operation, outStream chan Operation, wg *sync.WaitGroup) {
+	taskWg := sync.WaitGroup {}
+	for op := range inStream {
+		// execute the op
+		doErr := pool.Do(op)
+		if doErr != nil {
+			// TODO: do some error handling here
+			op.Done()
+		}
+
+		taskWg.Add(1)
+
+		// wait till the op is done, and then move it to the outstream
+		go func(op Operation, taskWg *sync.WaitGroup) {
+			op.Wait()
+			outStream <- op
+			taskWg.Done()
+		}(op, &taskWg)
+	}
+
+	// even if the inStream is closed, wait till all the
+	// tasks have completed before returning
+	taskWg.Wait()
+
+	// at this point, mark the whole execute as done
+	wg.Done()
+
+	// close the outstream
+	close(outStream)
+}
+
 func (pool *WorkerPool) wrapStream(inStream <-chan Operation, wg *sync.WaitGroup) (chan Operation, error) {
 	outStream := make(chan Operation)
 	if pool.state != running {
@@ -410,24 +482,7 @@ func (pool *WorkerPool) wrapStream(inStream <-chan Operation, wg *sync.WaitGroup
 		return outStream, errors.New("pool not running; stream will never be processed")
 	}
 
-	go func() {
-		taskWg := sync.WaitGroup {}
-		for op := range inStream {
-			// TODO: replace this with a single execute
-			pool.Execute([]Operation{ op })
-			taskWg.Add(1)
-
-			go func(op Operation, wg *sync.WaitGroup) {
-				op.Wait()
-				outStream <- op
-				wg.Done()
-			}(op, wg)
-		}
-
-		taskWg.Wait()
-		wg.Done()
-		close(outStream)
-	}()
+	go pool.pipe(inStream, outStream, wg)
 
 	return outStream, nil
 }
@@ -448,6 +503,7 @@ func (pool *WorkerPool) Wrap(inStream <- chan Operation) (<-chan Operation, erro
 			done: make(chan interface{}),
 		},
 	}
+
 	pool.reqChan <- &req
 	req.Wait()
 	return req.Output, req.Error
