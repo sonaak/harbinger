@@ -434,6 +434,9 @@ func (pool *WorkerPool) Execute(ops []Operation) (<-chan Operation, error) {
 }
 
 
+// Do - executes a single operation asynchronously. This returns an error
+// if the worker pool is not running (e.g. has not started or is shutdown)
+// because then the channels are all closed.
 func (pool *WorkerPool) Do(op Operation) error {
 	doSingleReq := doSingleReq {
 		Input: op,
@@ -483,7 +486,6 @@ func (pool *WorkerPool) wrapStream(inStream <-chan Operation, wg *sync.WaitGroup
 	}
 
 	go pool.pipe(inStream, outStream, wg)
-
 	return outStream, nil
 }
 
