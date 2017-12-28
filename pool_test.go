@@ -238,3 +238,17 @@ func Test_doSingleReq_Type(t *testing.T) {
 }
 
 
+func Test_wrapStreamReq_Type(t *testing.T) {
+	req := wrapStreamReq{}
+	if req.Type() != wrap {
+		t.Error("expect wrapStreamReq instance to have type wrap")
+	}
+}
+
+
+func Test_redriveReq_Type(t *testing.T) {
+	req := redriveReq{}
+	if req.Type() != redrive {
+		t.Error("expect redriveReq instance to have type redrive")
+	}
+}
