@@ -228,3 +228,13 @@ func Test_executeReq_Type(t *testing.T) {
 		t.Error("expect executeReq instance to have type execute")
 	}
 }
+
+
+func Test_doSingleReq_Type(t *testing.T) {
+	req := doSingleReq{}
+	if req.Type() != dosingle {
+		t.Error("expect doSingleReq instance to have type dosingle")
+	}
+}
+
+
