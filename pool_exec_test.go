@@ -3,6 +3,7 @@ package harbinger
 import (
 	"testing"
 	"time"
+	"github.com/pkg/errors"
 )
 
 
@@ -14,6 +15,7 @@ func TestActorPool_Execute(t *testing.T) {
 		newAddOneOperation(1, 1 * time.Millisecond),
 		newAddOneOperation(6, 3 * time.Millisecond),
 	}
+	defer pool.Shutdown()
 
 	resp, err := pool.Execute(ops)
 	if err != nil {
@@ -72,3 +74,33 @@ func TestActorPool_ExecuteWithoutStart(t *testing.T) {
 
 }
 
+
+type addOneRetryWorker struct {
+	retryCount uint
+
+	RetryErr   error
+	addOneWorker
+}
+
+
+func (worker *addOneRetryWorker) Process(op Operation) (retry bool, err error) {
+	switch v := op.(type) {
+	case *addOneOperation:
+		if worker.retryCount < v.Try && worker.RetryErr != nil {
+			return true, worker.RetryErr
+		}
+
+		v.Output = v.Input + 1
+		return false, nil
+
+	default:
+		return false, errors.New("wrong operation type")
+	}
+
+	return true, nil
+}
+
+
+func TestWorkerPool_ExecuteRetry(t *testing.T) {
+
+}
