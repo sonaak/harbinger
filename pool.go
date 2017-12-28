@@ -499,7 +499,7 @@ func (pool *WorkerPool) wrapStream(inStream <-chan Operation, wg *sync.WaitGroup
 // stream is only closed when all the inbound requests have been handled, either
 // successfully or unsuccessfully (but marked as done).
 func (pool *WorkerPool) Wrap(inStream <- chan Operation) (<-chan Operation, error) {
-	req := wrapStreamReq{
+	req := wrapStreamReq {
 		Input: inStream,
 		asyncreq: asyncreq{
 			done: make(chan interface{}),
