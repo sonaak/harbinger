@@ -253,11 +253,23 @@ func TestActorPool_ExecuteWithoutStart(t *testing.T) {
 	}
 	defer pool.Shutdown()
 
-	timeout(func(){
-		_, err := pool.Execute(ops)
+	timeoutErr := timeout(func(){
+		resp, err := pool.Execute(ops)
 		if err == nil {
 			t.Error("expects error when executing against an unstarted pool")
 		}
+
+		_, isOpen := <-resp
+		if isOpen {
+			t.Error("expects output channel to be closed")
+		}
+
 	}, 1 * time.Second)
 
+	if timeoutErr != nil {
+		t.Error("should not timeout after 1s")
+	}
+
 }
+
+
