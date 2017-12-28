@@ -206,3 +206,25 @@ func TestActorPool_Startup_InitFail(t *testing.T) {
 }
 
 
+func Test_startupReq_Type(t *testing.T) {
+	req := startupReq{}
+	if req.Type() != startup {
+		t.Error("expect startupReq instance to have type startup")
+	}
+}
+
+
+func Test_shutdownReq_Type(t *testing.T) {
+	req := shutdownReq(true)
+	if req.Type() != shutdown {
+		t.Error("expect shutdownReq instance to have type shutdown")
+	}
+}
+
+
+func Test_executeReq_Type(t *testing.T) {
+	req := executeReq{}
+	if req.Type() != execute {
+		t.Error("expect executeReq instance to have type execute")
+	}
+}
