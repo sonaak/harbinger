@@ -7,7 +7,7 @@ import (
 )
 
 
-func TestActorPool_Execute(t *testing.T) {
+func TestWorkerPool_Execute(t *testing.T) {
 	pool := setupHappyPath()
 	pool.Start()
 
@@ -47,7 +47,7 @@ func TestActorPool_Execute(t *testing.T) {
 }
 
 
-func TestActorPool_ExecuteWithoutStart(t *testing.T) {
+func TestWorkerPool_ExecuteWithoutStart(t *testing.T) {
 	pool := setupHappyPath()
 	ops := []Operation {
 		newAddOneOperation(1, 1 * time.Millisecond),

@@ -118,7 +118,7 @@ func setupHappyPath() *WorkerPool {
 }
 
 // Tests that starting the worker pool is going to be OK
-func TestActorPool_Start(t *testing.T) {
+func TestWorkerPool_Start(t *testing.T) {
 	pool := setupHappyPath()
 
 	timeoutDuration := 1 * time.Second
@@ -143,7 +143,7 @@ func parallelTestStart(pool *WorkerPool, wg *sync.WaitGroup, t *testing.T) {
 }
 
 // Tests that starting the worker pool is idempotent
-func TestActorPool_Start_Idempotence(t *testing.T) {
+func TestWorkerPool_Start_Idempotence(t *testing.T) {
 	pool := setupHappyPath()
 
 	wg := sync.WaitGroup{}
@@ -181,7 +181,7 @@ func (worker *initFailWorker) Init() error {
 	return errors.New("fail to init")
 }
 
-func TestActorPool_Startup_InitFail(t *testing.T) {
+func TestWorkerPool_Startup_InitFail(t *testing.T) {
 	workers := []Worker{
 		&addOneWorker{},
 		&initFailWorker{&addOneWorker{}},
