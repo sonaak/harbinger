@@ -117,3 +117,31 @@ func TestWorkerPool_WrapWithRetry(t *testing.T) {
 		}
 	}, 2*time.Second)
 }
+
+func TestWorkerPool_WrapBeforeStart(t *testing.T) {
+	pool := setupHappyPath()
+	inputStream := make(chan Operation)
+	ops := []Operation{
+		newAddOneOperation(1, 10*time.Millisecond),
+		newAddOneOperation(6, 10*time.Millisecond),
+		newAddOneOperation(6, 12*time.Millisecond),
+		newAddOneOperation(6, 2*time.Millisecond),
+	}
+
+	go func(ops []Operation) {
+		for _, op := range ops {
+			inputStream <- op
+		}
+	}(ops)
+
+	outputStream, err := pool.Wrap(inputStream)
+	if err == nil {
+		t.Error("expects err from wrapping without starting")
+	}
+
+	testWithTimeout(t, func(t *testing.T) {
+		for range outputStream {
+			t.Error("expect output to be empty")
+		}
+	}, 3*time.Second)
+}
