@@ -123,6 +123,7 @@ func setupHappyPath() *WorkerPool {
 	workers := []Worker{
 		&addOneWorker{},
 		&addOneWorker{},
+		&addOneWorker{},
 	}
 	return NewPool(workers)
 }

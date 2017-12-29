@@ -7,6 +7,23 @@ import (
 )
 
 
+func checkAddOneOp(op Operation) (bool, error) {
+	switch v := op.(type) {
+	case *addOneOperation:
+		if v.Output != v.Input + 1 {
+			return false, errors.Errorf("expects output to be %d; actual: %d",
+				v.Input + 1, v.Output,
+			)
+		}
+
+	default:
+		return false, errors.New("expects all output type to be addOneOperation")
+	}
+
+	return true, nil
+}
+
+
 func TestWorkerPool_Execute(t *testing.T) {
 	pool := setupHappyPath()
 	pool.Start()
@@ -26,16 +43,9 @@ func TestWorkerPool_Execute(t *testing.T) {
 		t,
 		func(t *testing.T){
 			for op := range resp {
-				switch v := op.(type) {
-				case *addOneOperation:
-					if v.Output != v.Input + 1 {
-						t.Errorf("expects output to be %d; actual: %d",
-							v.Input + 1, v.Output,
-						)
-					}
-
-				default:
-					t.Error("expects all output type to be addOneOperation")
+				valid, err := checkAddOneOp(op)
+				if !valid {
+					t.Error(err.Error())
 				}
 			}
 		},
@@ -128,7 +138,37 @@ func TestWorkerPool_ExecuteRetry(t *testing.T) {
 
 
 func TestWorkerPool_ExecuteIsParallel(t *testing.T) {
+	// setup three workers
 	pool := setupHappyPath()
+
+	// start the pool
 	pool.Start()
+
+	// and make sure to tear the whole bloody thing down when done
 	defer pool.Shutdown()
+
+	// enqueue some operations
+	ops := []Operation {
+		newAddOneOperation(1, 10 * time.Millisecond),
+		newAddOneOperation(6, 10 * time.Millisecond),
+		newAddOneOperation(6, 12 * time.Millisecond),
+		newAddOneOperation(6, 2 * time.Millisecond),
+	}
+
+	// make sure the request does not take longer than 15ms (probably
+	// can cut that down a bit)
+	testWithTimeout(t,
+		func(t *testing.T){
+			resp, err := pool.Execute(ops)
+			if err != nil {
+				t.Errorf("expect there not to be any errors: %v", err)
+			}
+
+			for op := range resp {
+				valid, err := checkAddOneOp(op)
+				if !valid {
+					t.Error(err.Error())
+				}
+			}
+		}, 15 * time.Millisecond)
 }
