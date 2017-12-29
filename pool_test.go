@@ -110,7 +110,7 @@ func timeout(f func(), d time.Duration) error {
 }
 
 func testWithTimeout(t *testing.T, f func(*testing.T), d time.Duration) {
-	timeoutErr := timeout(func(){
+	timeoutErr := timeout(func() {
 		f(t)
 	}, d)
 
@@ -137,7 +137,7 @@ func TestWorkerPool_Start(t *testing.T) {
 		if err != nil {
 			t.Error("should not encounter any error in start")
 		}
-	}, 1 * time.Second)
+	}, 1*time.Second)
 }
 
 func parallelTestStart(pool *WorkerPool, wg *sync.WaitGroup, t *testing.T) {
@@ -160,7 +160,7 @@ func TestWorkerPool_Start_Idempotence(t *testing.T) {
 
 	testWithTimeout(t, func(t *testing.T) {
 		wg.Wait()
-	}, 1 * time.Second)
+	}, 1*time.Second)
 
 	// assert that each of the workers have only been
 	// initialised once
@@ -199,9 +199,8 @@ func TestWorkerPool_Startup_InitFail(t *testing.T) {
 		// this channel should be closed
 		for range pool.operationChan {
 		}
-	}, 2 * time.Second)
+	}, 2*time.Second)
 }
-
 
 func Test_startupReq_Type(t *testing.T) {
 	req := startupReq{}
@@ -210,14 +209,12 @@ func Test_startupReq_Type(t *testing.T) {
 	}
 }
 
-
 func Test_shutdownReq_Type(t *testing.T) {
 	req := shutdownReq(true)
 	if req.Type() != shutdown {
 		t.Error("expect shutdownReq instance to have type shutdown")
 	}
 }
-
 
 func Test_executeReq_Type(t *testing.T) {
 	req := executeReq{}
@@ -226,7 +223,6 @@ func Test_executeReq_Type(t *testing.T) {
 	}
 }
 
-
 func Test_doSingleReq_Type(t *testing.T) {
 	req := doSingleReq{}
 	if req.Type() != dosingle {
@@ -234,14 +230,12 @@ func Test_doSingleReq_Type(t *testing.T) {
 	}
 }
 
-
 func Test_wrapStreamReq_Type(t *testing.T) {
 	req := wrapStreamReq{}
 	if req.Type() != wrap {
 		t.Error("expect wrapStreamReq instance to have type wrap")
 	}
 }
-
 
 func Test_redriveReq_Type(t *testing.T) {
 	req := redriveReq{}

@@ -1,18 +1,17 @@
 package harbinger
 
 import (
+	"github.com/pkg/errors"
 	"testing"
 	"time"
-	"github.com/pkg/errors"
 )
-
 
 func checkAddOneOp(op Operation) (bool, error) {
 	switch v := op.(type) {
 	case *addOneOperation:
-		if v.Output != v.Input + 1 {
+		if v.Output != v.Input+1 {
 			return false, errors.Errorf("expects output to be %d; actual: %d",
-				v.Input + 1, v.Output,
+				v.Input+1, v.Output,
 			)
 		}
 
@@ -23,14 +22,13 @@ func checkAddOneOp(op Operation) (bool, error) {
 	return true, nil
 }
 
-
 func TestWorkerPool_Execute(t *testing.T) {
 	pool := setupHappyPath()
 	pool.Start()
 
-	ops := []Operation {
-		newAddOneOperation(1, 1 * time.Millisecond),
-		newAddOneOperation(6, 3 * time.Millisecond),
+	ops := []Operation{
+		newAddOneOperation(1, 1*time.Millisecond),
+		newAddOneOperation(6, 3*time.Millisecond),
 	}
 	defer pool.Shutdown()
 
@@ -41,7 +39,7 @@ func TestWorkerPool_Execute(t *testing.T) {
 
 	testWithTimeout(
 		t,
-		func(t *testing.T){
+		func(t *testing.T) {
 			for op := range resp {
 				valid, err := checkAddOneOp(op)
 				if !valid {
@@ -49,21 +47,20 @@ func TestWorkerPool_Execute(t *testing.T) {
 				}
 			}
 		},
-		1 * time.Second,
+		1*time.Second,
 	)
 }
 
-
 func TestWorkerPool_ExecuteWithoutStart(t *testing.T) {
 	pool := setupHappyPath()
-	ops := []Operation {
-		newAddOneOperation(1, 1 * time.Millisecond),
-		newAddOneOperation(6, 3 * time.Millisecond),
+	ops := []Operation{
+		newAddOneOperation(1, 1*time.Millisecond),
+		newAddOneOperation(6, 3*time.Millisecond),
 	}
 	defer pool.Shutdown()
 	testWithTimeout(
 		t,
-		func(t *testing.T){
+		func(t *testing.T) {
 			resp, err := pool.Execute(ops)
 			if err == nil {
 				t.Error("expects error when executing against an unstarted pool")
@@ -75,17 +72,15 @@ func TestWorkerPool_ExecuteWithoutStart(t *testing.T) {
 			}
 
 		},
-		1 * time.Second)
+		1*time.Second)
 }
-
 
 type addOneRetryWorker struct {
 	retryCount uint
 
-	RetryErr   error
+	RetryErr error
 	addOneWorker
 }
-
 
 func (worker *addOneRetryWorker) Process(op Operation) (retry bool, err error) {
 	switch v := op.(type) {
@@ -101,18 +96,16 @@ func (worker *addOneRetryWorker) Process(op Operation) (retry bool, err error) {
 	}
 }
 
-
 func newAddOneRetryWorker(retryErr error, retryCount uint) *addOneRetryWorker {
 	return &addOneRetryWorker{
-		retryCount: retryCount,
-		RetryErr: retryErr,
+		retryCount:   retryCount,
+		RetryErr:     retryErr,
 		addOneWorker: addOneWorker{},
 	}
 }
 
-
 func TestWorkerPool_ExecuteRetry(t *testing.T) {
-	workers := []Worker {
+	workers := []Worker{
 		newAddOneRetryWorker(errors.New("error: something bad happened"), 3),
 		newAddOneRetryWorker(errors.New("error: something bad happened"), 4),
 	}
@@ -121,9 +114,9 @@ func TestWorkerPool_ExecuteRetry(t *testing.T) {
 	pool.Start()
 	defer pool.Shutdown()
 
-	ops := []Operation {
-		newAddOneOperation(1, 1 * time.Millisecond),
-		newAddOneOperation(6, 3 * time.Millisecond),
+	ops := []Operation{
+		newAddOneOperation(1, 1*time.Millisecond),
+		newAddOneOperation(6, 3*time.Millisecond),
 	}
 
 	testWithTimeout(t, func(t *testing.T) {
@@ -132,10 +125,10 @@ func TestWorkerPool_ExecuteRetry(t *testing.T) {
 			t.Errorf("expect there not to be any errors: %v", err)
 		}
 
-		for range resp {}
-	}, 2 * time.Second)
+		for range resp {
+		}
+	}, 2*time.Second)
 }
-
 
 func TestWorkerPool_ExecuteIsParallel(t *testing.T) {
 	// setup three workers
@@ -148,17 +141,17 @@ func TestWorkerPool_ExecuteIsParallel(t *testing.T) {
 	defer pool.Shutdown()
 
 	// enqueue some operations
-	ops := []Operation {
-		newAddOneOperation(1, 10 * time.Millisecond),
-		newAddOneOperation(6, 10 * time.Millisecond),
-		newAddOneOperation(6, 12 * time.Millisecond),
-		newAddOneOperation(6, 2 * time.Millisecond),
+	ops := []Operation{
+		newAddOneOperation(1, 10*time.Millisecond),
+		newAddOneOperation(6, 10*time.Millisecond),
+		newAddOneOperation(6, 12*time.Millisecond),
+		newAddOneOperation(6, 2*time.Millisecond),
 	}
 
 	// make sure the request does not take longer than 15ms (probably
 	// can cut that down a bit)
 	testWithTimeout(t,
-		func(t *testing.T){
+		func(t *testing.T) {
 			resp, err := pool.Execute(ops)
 			if err != nil {
 				t.Errorf("expect there not to be any errors: %v", err)
@@ -170,5 +163,11 @@ func TestWorkerPool_ExecuteIsParallel(t *testing.T) {
 					t.Error(err.Error())
 				}
 			}
-		}, 15 * time.Millisecond)
+		}, 15*time.Millisecond)
+}
+
+func TestWorkerPool_ExecuteMultiple(t *testing.T) {
+	pool := setupHappyPath()
+	pool.Start()
+	defer pool.Shutdown()
 }

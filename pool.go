@@ -120,22 +120,19 @@ type doSingleReq struct {
 	Input Operation
 }
 
-
 func (doSingleReq) Type() reqtype {
 	return dosingle
 }
 
-
 type wrapStreamReq struct {
 	asyncreq
-	Input <-chan Operation
+	Input  <-chan Operation
 	Output chan Operation
 }
 
 func (req *wrapStreamReq) Type() reqtype {
 	return wrap
 }
-
 
 type redriveReq struct {
 	asyncreq
@@ -433,12 +430,11 @@ func (pool *WorkerPool) Execute(ops []Operation) (<-chan Operation, error) {
 	return output, executeReq.Error
 }
 
-
 // Do - executes a single operation asynchronously. This returns an error
 // if the worker pool is not running (e.g. has not started or is shutdown)
 // because then the channels are all closed.
 func (pool *WorkerPool) Do(op Operation) error {
-	doSingleReq := doSingleReq {
+	doSingleReq := doSingleReq{
 		Input: op,
 	}
 
@@ -448,7 +444,7 @@ func (pool *WorkerPool) Do(op Operation) error {
 }
 
 func (pool *WorkerPool) pipe(inStream <-chan Operation, outStream chan Operation, wg *sync.WaitGroup) {
-	taskWg := sync.WaitGroup {}
+	taskWg := sync.WaitGroup{}
 	for op := range inStream {
 		// execute the op
 		doErr := pool.Do(op)
@@ -498,8 +494,8 @@ func (pool *WorkerPool) wrapStream(inStream <-chan Operation, wg *sync.WaitGroup
 // When the input stream is closed, the output stream may not close. The output
 // stream is only closed when all the inbound requests have been handled, either
 // successfully or unsuccessfully (but marked as done).
-func (pool *WorkerPool) Wrap(inStream <- chan Operation) (<-chan Operation, error) {
-	req := wrapStreamReq {
+func (pool *WorkerPool) Wrap(inStream <-chan Operation) (<-chan Operation, error) {
+	req := wrapStreamReq{
 		Input: inStream,
 		asyncreq: asyncreq{
 			done: make(chan interface{}),
