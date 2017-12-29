@@ -86,21 +86,63 @@ type addOneRetryWorker struct {
 func (worker *addOneRetryWorker) Process(op Operation) (retry bool, err error) {
 	switch v := op.(type) {
 	case *addOneOperation:
-		if worker.retryCount < v.Try && worker.RetryErr != nil {
+		if worker.retryCount > v.Try && worker.RetryErr != nil {
 			return true, worker.RetryErr
 		}
 
-		v.Output = v.Input + 1
-		return false, nil
+		return worker.addOneWorker.Process(op)
 
 	default:
 		return false, errors.New("wrong operation type")
 	}
+}
 
-	return true, nil
+
+func newAddOneRetryWorker(retryErr error, retryCount uint) *addOneRetryWorker {
+	return &addOneRetryWorker{
+		retryCount: retryCount,
+		RetryErr: retryErr,
+		addOneWorker: addOneWorker{},
+	}
 }
 
 
 func TestWorkerPool_ExecuteRetry(t *testing.T) {
+	workers := []Worker {
+		newAddOneRetryWorker(errors.New("error: something bad happened"), 3),
+		newAddOneRetryWorker(errors.New("error: something bad happened"), 4),
+	}
 
+	pool := NewPool(workers)
+	pool.Start()
+	defer pool.Shutdown()
+
+	ops := []Operation {
+		newAddOneOperation(1, 1 * time.Millisecond),
+		newAddOneOperation(6, 3 * time.Millisecond),
+	}
+
+	timeoutErr := timeout(func() {
+		resp, err := pool.Execute(ops)
+		if err != nil {
+			t.Errorf("expect there not to be any errors: %v", err)
+		}
+
+		for range resp {}
+	}, 2 * time.Second)
+
+	if timeoutErr != nil {
+		t.Error("should not time out after 2s")
+	}
+}
+
+
+func TestWorkerPool_ExecuteIsParallel(t *testing.T) {
+	pool := setupHappyPath()
+	pool.Start()
+	defer pool.Shutdown()
+
+	timeoutErr := tmeout(func(){
+
+	})
 }
