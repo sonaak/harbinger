@@ -2,9 +2,9 @@ package harbinger
 
 import (
 	"github.com/pkg/errors"
+	"sync"
 	"testing"
 	"time"
-	"sync"
 )
 
 func checkAddOneOp(op Operation) (bool, error) {
@@ -214,7 +214,6 @@ func TestWorkerPool_ExecuteMultiple(t *testing.T) {
 		}, 50*time.Millisecond)
 }
 
-
 func TestWorkerPool_ExecuteMultipleThenShutdown(t *testing.T) {
 	pool := setupHappyPath()
 	pool.Start()
@@ -235,7 +234,7 @@ func TestWorkerPool_ExecuteMultipleThenShutdown(t *testing.T) {
 	}
 
 	wg := sync.WaitGroup{}
-	testWithTimeout(t, func(t *testing.T){
+	testWithTimeout(t, func(t *testing.T) {
 		wg.Add(3)
 		for _, ops := range opsCollection {
 			go func(ops []Operation) {
@@ -249,5 +248,5 @@ func TestWorkerPool_ExecuteMultipleThenShutdown(t *testing.T) {
 		}
 		wg.Wait()
 		pool.Shutdown()
-	}, 1 * time.Second)
+	}, 1*time.Second)
 }

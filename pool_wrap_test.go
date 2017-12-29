@@ -25,7 +25,7 @@ func TestWorkerPool_Wrap(t *testing.T) {
 		close(inputStream)
 	}(ops)
 
-	testWithTimeout(t, func(t *testing.T){
+	testWithTimeout(t, func(t *testing.T) {
 		outputStream, err := pool.Wrap(inputStream)
 		if err != nil {
 			t.Errorf("expect there not to be any errors: %v", err)
@@ -36,5 +36,5 @@ func TestWorkerPool_Wrap(t *testing.T) {
 				t.Error(err.Error())
 			}
 		}
-	}, 1 * time.Second)
+	}, 1*time.Second)
 }
