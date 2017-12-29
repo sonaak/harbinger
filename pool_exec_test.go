@@ -22,8 +22,9 @@ func TestWorkerPool_Execute(t *testing.T) {
 		t.Errorf("should not error out: %v", err)
 	}
 
-	timeoutErr := timeout(
-		func(){
+	testWithTimeout(
+		t,
+		func(t *testing.T){
 			for op := range resp {
 				switch v := op.(type) {
 				case *addOneOperation:
@@ -40,10 +41,6 @@ func TestWorkerPool_Execute(t *testing.T) {
 		},
 		1 * time.Second,
 	)
-
-	if timeoutErr != nil {
-		t.Error("should not timeout after 1s")
-	}
 }
 
 
@@ -54,24 +51,21 @@ func TestWorkerPool_ExecuteWithoutStart(t *testing.T) {
 		newAddOneOperation(6, 3 * time.Millisecond),
 	}
 	defer pool.Shutdown()
+	testWithTimeout(
+		t,
+		func(t *testing.T){
+			resp, err := pool.Execute(ops)
+			if err == nil {
+				t.Error("expects error when executing against an unstarted pool")
+			}
 
-	timeoutErr := timeout(func(){
-		resp, err := pool.Execute(ops)
-		if err == nil {
-			t.Error("expects error when executing against an unstarted pool")
-		}
+			_, isOpen := <-resp
+			if isOpen {
+				t.Error("expects output channel to be closed")
+			}
 
-		_, isOpen := <-resp
-		if isOpen {
-			t.Error("expects output channel to be closed")
-		}
-
-	}, 1 * time.Second)
-
-	if timeoutErr != nil {
-		t.Error("should not timeout after 1s")
-	}
-
+		},
+		1 * time.Second)
 }
 
 
@@ -122,7 +116,7 @@ func TestWorkerPool_ExecuteRetry(t *testing.T) {
 		newAddOneOperation(6, 3 * time.Millisecond),
 	}
 
-	timeoutErr := timeout(func() {
+	testWithTimeout(t, func(t *testing.T) {
 		resp, err := pool.Execute(ops)
 		if err != nil {
 			t.Errorf("expect there not to be any errors: %v", err)
@@ -130,10 +124,6 @@ func TestWorkerPool_ExecuteRetry(t *testing.T) {
 
 		for range resp {}
 	}, 2 * time.Second)
-
-	if timeoutErr != nil {
-		t.Error("should not time out after 2s")
-	}
 }
 
 

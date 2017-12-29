@@ -157,13 +157,9 @@ func TestWorkerPool_Start_Idempotence(t *testing.T) {
 	go parallelTestStart(pool, &wg, t)
 	go parallelTestStart(pool, &wg, t)
 
-	timeoutErr := timeout(func() {
+	testWithTimeout(t, func(t *testing.T) {
 		wg.Wait()
-	}, 1*time.Second)
-
-	if timeoutErr != nil {
-		t.Errorf("timed out waiting for 2x starts")
-	}
+	}, 1 * time.Second)
 
 	// assert that each of the workers have only been
 	// initialised once
@@ -193,8 +189,7 @@ func TestWorkerPool_Startup_InitFail(t *testing.T) {
 		&addOneWorker{},
 	}
 	pool := NewPool(workers)
-	timeoutDuration := 2 * time.Second
-	timeoutErr := timeout(func() {
+	testWithTimeout(t, func(t *testing.T) {
 		err := pool.Start()
 		if err == nil {
 			t.Errorf("start with bad worker should result in failure")
@@ -203,11 +198,7 @@ func TestWorkerPool_Startup_InitFail(t *testing.T) {
 		// this channel should be closed
 		for range pool.operationChan {
 		}
-	}, timeoutDuration)
-
-	if timeoutErr != nil {
-		t.Errorf("should not timeout after %s", timeoutDuration.String())
-	}
+	}, 2 * time.Second)
 }
 
 
