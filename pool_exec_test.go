@@ -170,4 +170,45 @@ func TestWorkerPool_ExecuteMultiple(t *testing.T) {
 	pool := setupHappyPath()
 	pool.Start()
 	defer pool.Shutdown()
+
+	ops1 := []Operation{
+		newAddOneOperation(1, 10*time.Millisecond),
+		newAddOneOperation(6, 10*time.Millisecond),
+		newAddOneOperation(6, 12*time.Millisecond),
+		newAddOneOperation(6, 2*time.Millisecond),
+	}
+
+	ops2 := []Operation {
+		newAddOneOperation(1, 20*time.Millisecond),
+		newAddOneOperation(6, 30*time.Millisecond),
+	}
+
+	testWithTimeout(t,
+		func(t *testing.T){
+			resp1, err := pool.Execute(ops1)
+			if err != nil {
+				t.Errorf("expect there not to be any errors: %v", err)
+				return
+			}
+
+			resp2, err := pool.Execute(ops2)
+			if err != nil {
+				t.Errorf("expect there not to be any errors: %v", err)
+				return
+			}
+
+			for op := range resp1 {
+				valid, err := checkAddOneOp(op)
+				if !valid {
+					t.Error(err.Error())
+				}
+			}
+
+			for op := range resp2 {
+				valid, err := checkAddOneOp(op)
+				if !valid {
+					t.Error(err.Error())
+				}
+			}
+		}, 50 * time.Millisecond)
 }
