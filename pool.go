@@ -164,6 +164,7 @@ type WorkerPool struct {
 	state         uint32
 	execWg        *sync.WaitGroup
 	closeOnce     *sync.Once
+	shutdownOnce  *sync.Once
 }
 
 func (pool *WorkerPool) restore(worker Worker) {
@@ -361,12 +362,16 @@ func (pool *WorkerPool) listenToRequests() {
 			}()
 
 		case shutdownReq:
-			// wait till all the previous executes have completed
-			pool.execWg.Wait()
+			go func(pool *WorkerPool) {
+				pool.shutdownOnce.Do(func() {
+					// wait till all the previous executes have completed
+					pool.execWg.Wait()
 
-			// then stop everything
-			pool.shutdown()
-			pool.state = stopped
+					// then stop everything
+					pool.shutdown()
+					pool.state = stopped
+				})
+			}(pool)
 		}
 	}
 }
@@ -381,6 +386,7 @@ func NewPool(workers []Worker) *WorkerPool {
 		reqChan: make(chan poolreq),
 		state:   stopped,
 		execWg:  &sync.WaitGroup{},
+		shutdownOnce: &sync.Once{},
 	}
 
 	go pool.listenToRequests()

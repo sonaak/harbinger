@@ -3,6 +3,7 @@ package harbinger
 import (
 	"testing"
 	"time"
+	"github.com/pkg/errors"
 )
 
 func TestWorkerPool_Wrap(t *testing.T) {
@@ -37,4 +38,84 @@ func TestWorkerPool_Wrap(t *testing.T) {
 			}
 		}
 	}, 1*time.Second)
+}
+
+
+func TestWorkerPool_WrapShutdown(t *testing.T) {
+	pool := setupHappyPath()
+	pool.Start()
+
+	inputStream := make(chan Operation)
+	ops := []Operation{
+		newAddOneOperation(1, 10*time.Millisecond),
+		newAddOneOperation(6, 10*time.Millisecond),
+		newAddOneOperation(6, 12*time.Millisecond),
+		newAddOneOperation(6, 2*time.Millisecond),
+	}
+
+	go func(ops []Operation) {
+		for _, op := range ops {
+			inputStream <- op
+		}
+		close(inputStream)
+	}(ops)
+
+	testWithTimeout(t, func(t *testing.T) {
+		outputStream, err := pool.Wrap(inputStream)
+		if err != nil {
+			t.Errorf("expect there not to be any errors: %v", err)
+			return
+		}
+
+		pool.Shutdown()
+		for op := range outputStream {
+			valid, err := checkAddOneOp(op)
+			if !valid {
+				t.Error(err.Error())
+			}
+		}
+	}, 1*time.Second)
+}
+
+
+func TestWorkerPool_WrapWithRetry(t *testing.T) {
+	workers := []Worker{
+		newAddOneRetryWorker(errors.New("error: something bad happened"), 3),
+		newAddOneRetryWorker(errors.New("error: something bad happened"), 4),
+	}
+
+	pool := NewPool(workers)
+	pool.Start()
+	defer pool.Shutdown()
+
+	inputStream := make(chan Operation)
+	ops := []Operation{
+		newAddOneOperation(1, 10*time.Millisecond),
+		newAddOneOperation(6, 10*time.Millisecond),
+		newAddOneOperation(6, 12*time.Millisecond),
+		newAddOneOperation(6, 2*time.Millisecond),
+	}
+
+	go func(ops []Operation) {
+		for _, op := range ops {
+			inputStream <- op
+		}
+		close(inputStream)
+	}(ops)
+
+	testWithTimeout(t, func(t *testing.T) {
+		outputStream, err := pool.Wrap(inputStream)
+		if err != nil {
+			t.Errorf("expect there not to be any errors: %v", err)
+			return
+		}
+		pool.Shutdown()
+
+		for op := range outputStream {
+			valid, err := checkAddOneOp(op)
+			if !valid {
+				t.Error(err.Error())
+			}
+		}
+	}, 2*time.Second)
 }
