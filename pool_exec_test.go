@@ -141,8 +141,4 @@ func TestWorkerPool_ExecuteIsParallel(t *testing.T) {
 	pool := setupHappyPath()
 	pool.Start()
 	defer pool.Shutdown()
-
-	timeoutErr := tmeout(func(){
-
-	})
 }

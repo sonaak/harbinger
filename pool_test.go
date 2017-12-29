@@ -109,6 +109,16 @@ func timeout(f func(), d time.Duration) error {
 	}
 }
 
+func testWithTimeout(t *testing.T, f func(*testing.T), d time.Duration) {
+	timeoutErr := timeout(func(){
+		f(t)
+	}, d)
+
+	if timeoutErr != nil {
+		t.Errorf("expect not to timeout after %s", d.String())
+	}
+}
+
 func setupHappyPath() *WorkerPool {
 	workers := []Worker{
 		&addOneWorker{},
@@ -121,17 +131,12 @@ func setupHappyPath() *WorkerPool {
 func TestWorkerPool_Start(t *testing.T) {
 	pool := setupHappyPath()
 
-	timeoutDuration := 1 * time.Second
-	timeoutErr := timeout(func() {
+	testWithTimeout(t, func(t *testing.T) {
 		err := pool.Start()
 		if err != nil {
 			t.Error("should not encounter any error in start")
 		}
-	}, timeoutDuration)
-
-	if timeoutErr != nil {
-		t.Errorf("should not timeout after %s", timeoutDuration.String())
-	}
+	}, 1 * time.Second)
 }
 
 func parallelTestStart(pool *WorkerPool, wg *sync.WaitGroup, t *testing.T) {
