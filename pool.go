@@ -436,6 +436,9 @@ func (pool *WorkerPool) Execute(ops []Operation) (<-chan Operation, error) {
 func (pool *WorkerPool) Do(op Operation) error {
 	doSingleReq := doSingleReq{
 		Input: op,
+		asyncreq: asyncreq{
+			done: make(chan interface{}),
+		},
 	}
 
 	pool.reqChan <- &doSingleReq
@@ -448,11 +451,11 @@ func (pool *WorkerPool) pipe(inStream <-chan Operation, outStream chan Operation
 	for op := range inStream {
 		// execute the op
 		doErr := pool.Do(op)
+
 		if doErr != nil {
 			// TODO: do some error handling here
 			op.Done()
 		}
-
 		taskWg.Add(1)
 
 		// wait till the op is done, and then move it to the outstream
