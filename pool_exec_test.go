@@ -178,13 +178,13 @@ func TestWorkerPool_ExecuteMultiple(t *testing.T) {
 		newAddOneOperation(6, 2*time.Millisecond),
 	}
 
-	ops2 := []Operation {
+	ops2 := []Operation{
 		newAddOneOperation(1, 20*time.Millisecond),
 		newAddOneOperation(6, 30*time.Millisecond),
 	}
 
 	testWithTimeout(t,
-		func(t *testing.T){
+		func(t *testing.T) {
 			resp1, err := pool.Execute(ops1)
 			if err != nil {
 				t.Errorf("expect there not to be any errors: %v", err)
@@ -210,5 +210,5 @@ func TestWorkerPool_ExecuteMultiple(t *testing.T) {
 					t.Error(err.Error())
 				}
 			}
-		}, 50 * time.Millisecond)
+		}, 50*time.Millisecond)
 }
