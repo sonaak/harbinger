@@ -1,9 +1,9 @@
 package harbinger
 
 import (
+	"github.com/pkg/errors"
 	"testing"
 	"time"
-	"github.com/pkg/errors"
 )
 
 func TestWorkerPool_Wrap(t *testing.T) {
@@ -40,7 +40,6 @@ func TestWorkerPool_Wrap(t *testing.T) {
 	}, 1*time.Second)
 }
 
-
 func TestWorkerPool_WrapShutdown(t *testing.T) {
 	pool := setupHappyPath()
 	pool.Start()
@@ -76,7 +75,6 @@ func TestWorkerPool_WrapShutdown(t *testing.T) {
 		}
 	}, 1*time.Second)
 }
-
 
 func TestWorkerPool_WrapWithRetry(t *testing.T) {
 	workers := []Worker{

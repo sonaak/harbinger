@@ -382,10 +382,10 @@ func (pool *WorkerPool) listenToRequests() {
 // appropriately when the shutdown sequence is called.
 func NewPool(workers []Worker) *WorkerPool {
 	pool := WorkerPool{
-		Workers: workers,
-		reqChan: make(chan poolreq),
-		state:   stopped,
-		execWg:  &sync.WaitGroup{},
+		Workers:      workers,
+		reqChan:      make(chan poolreq),
+		state:        stopped,
+		execWg:       &sync.WaitGroup{},
 		shutdownOnce: &sync.Once{},
 	}
 
