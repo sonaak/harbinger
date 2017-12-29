@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"testing"
 	"time"
+	"sync"
 )
 
 func checkAddOneOp(op Operation) (bool, error) {
@@ -148,7 +149,7 @@ func TestWorkerPool_ExecuteIsParallel(t *testing.T) {
 		newAddOneOperation(6, 2*time.Millisecond),
 	}
 
-	// make sure the request does not take longer than 15ms (probably
+	// make sure the request does not take longer than 20ms (probably
 	// can cut that down a bit)
 	testWithTimeout(t,
 		func(t *testing.T) {
@@ -163,7 +164,7 @@ func TestWorkerPool_ExecuteIsParallel(t *testing.T) {
 					t.Error(err.Error())
 				}
 			}
-		}, 15*time.Millisecond)
+		}, 20*time.Millisecond)
 }
 
 func TestWorkerPool_ExecuteMultiple(t *testing.T) {
@@ -211,4 +212,42 @@ func TestWorkerPool_ExecuteMultiple(t *testing.T) {
 				}
 			}
 		}, 50*time.Millisecond)
+}
+
+
+func TestWorkerPool_ExecuteMultipleThenShutdown(t *testing.T) {
+	pool := setupHappyPath()
+	pool.Start()
+
+	opsCollection := [][]Operation{
+		{
+			newAddOneOperation(6, 12*time.Millisecond),
+			newAddOneOperation(6, 2*time.Millisecond),
+		},
+		{
+			newAddOneOperation(1, 20*time.Millisecond),
+			newAddOneOperation(6, 30*time.Millisecond),
+		},
+		{
+			newAddOneOperation(1, 20*time.Millisecond),
+			newAddOneOperation(6, 30*time.Millisecond),
+		},
+	}
+
+	wg := sync.WaitGroup{}
+	testWithTimeout(t, func(t *testing.T){
+		wg.Add(3)
+		for _, ops := range opsCollection {
+			go func(ops []Operation) {
+				defer wg.Done()
+				_, err := pool.Execute(ops)
+
+				if err != nil {
+					t.Errorf("expect there not to be any errors: %v", err)
+				}
+			}(ops)
+		}
+		wg.Wait()
+		pool.Shutdown()
+	}, 1 * time.Second)
 }
