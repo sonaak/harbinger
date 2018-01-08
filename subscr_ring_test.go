@@ -13,7 +13,12 @@ func TestNewSubscriptionRing(t *testing.T) {
 		Signals: make(chan interface{}),
 	}
 
-	rng := NewSubscriptionRing(s)
+	rng := NewSubscriptionRing()
+	if rng.Len() != 0 {
+		t.Errorf("expect rng to have length 0 (actual: %d)", rng.Len())
+	}
+
+	rng.Add(s)
 
 	rngHead := rng.head
 	rngCurrent := rng.current
@@ -34,25 +39,15 @@ func TestNewSubscriptionRing(t *testing.T) {
 
 func TestSubscriptionRing_AddNext(t *testing.T) {
 	subscriptions := []*subscription {
-		&subscription{
-			id: 1,
-		},
-		&subscription{
-			id: 5,
-		},
-		&subscription{
-			id: 8,
-		},
-		&subscription{
-			id: 15,
-		},
-		&subscription{
-			id: 0,
-		},
+		{ id: 1 },
+		{ id: 5 },
+		{ id: 8 },
+		{ id: 15 },
+		{ id: 0 },
 	}
 
-	rng := NewSubscriptionRing(subscriptions[0])
-	for _, subs := range subscriptions[1:] {
+	rng := NewSubscriptionRing()
+	for _, subs := range subscriptions {
 		rng.Add(subs)
 	}
 
@@ -79,25 +74,15 @@ func TestSubscriptionRing_AddNext(t *testing.T) {
 
 func TestSubscriptionRing_Remove(t *testing.T) {
 	subscriptions := []*subscription {
-		&subscription{
-			id: 1,
-		},
-		&subscription{
-			id: 5,
-		},
-		&subscription{
-			id: 8,
-		},
-		&subscription{
-			id: 15,
-		},
-		&subscription{
-			id: 0,
-		},
+		{ id: 1 },
+		{ id: 5 },
+		{ id: 8 },
+		{ id: 15 },
+		{ id: 0 },
 	}
 
-	rng := NewSubscriptionRing(subscriptions[0])
-	for _, subs := range subscriptions[1:] {
+	rng := NewSubscriptionRing()
+	for _, subs := range subscriptions {
 		rng.Add(subs)
 	}
 	if !rng.Remove(subscriptions[2]) {
@@ -132,25 +117,15 @@ func TestSubscriptionRing_Remove(t *testing.T) {
 
 func TestSubscriptionRing_RemoveHead(t *testing.T) {
 	subscriptions := []*subscription {
-		&subscription{
-			id: 1,
-		},
-		&subscription{
-			id: 5,
-		},
-		&subscription{
-			id: 8,
-		},
-		&subscription{
-			id: 15,
-		},
-		&subscription{
-			id: 0,
-		},
+		{ id: 1 },
+		{ id: 5 },
+		{ id: 8 },
+		{ id: 15 },
+		{ id: 0 },
 	}
 
-	rng := NewSubscriptionRing(subscriptions[0])
-	for _, subs := range subscriptions[1:] {
+	rng := NewSubscriptionRing()
+	for _, subs := range subscriptions {
 		rng.Add(subs)
 	}
 
@@ -171,25 +146,15 @@ func TestSubscriptionRing_RemoveHead(t *testing.T) {
 
 func TestSubscriptionRing_Do(t *testing.T) {
 	subscriptions := []*subscription {
-		&subscription{
-			id: 1,
-		},
-		&subscription{
-			id: 5,
-		},
-		&subscription{
-			id: 8,
-		},
-		&subscription{
-			id: 15,
-		},
-		&subscription{
-			id: 0,
-		},
+		{ id: 1 },
+		{ id: 5 },
+		{ id: 8 },
+		{ id: 15 },
+		{ id: 0 },
 	}
 
-	rng := NewSubscriptionRing(subscriptions[0])
-	for _, subs := range subscriptions[1:] {
+	rng := NewSubscriptionRing()
+	for _, subs := range subscriptions {
 		rng.Add(subs)
 	}
 
