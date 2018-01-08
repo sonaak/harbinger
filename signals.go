@@ -8,12 +8,8 @@ type SubscriptionRing struct {
 }
 
 
-func NewSubscriptionRing(sub *subscription) *SubscriptionRing {
-	rng := ring.New(1)
-	rng.Value = sub
-	return &SubscriptionRing {
-		current: rng,
-		head: rng,
+func NewSubscriptionRing() *SubscriptionRing {
+	return &SubscriptionRing{
 	}
 }
 
@@ -45,7 +41,14 @@ func (rng *SubscriptionRing) Next() {
 func (rng *SubscriptionRing) Add(sub *subscription) {
 	newNode := ring.New(1)
 	newNode.Value = sub
-	newNode.Link(rng.head)
+
+	if rng.head != nil {
+		newNode.Link(rng.head)
+		return
+	}
+
+	rng.head = newNode
+	rng.current = newNode
 }
 
 
@@ -77,8 +80,7 @@ func (rng *SubscriptionRing) Remove(sub *subscription) bool {
 
 type Hub struct {
 	requests chan sigReq
-
-	subscriptions []*subscription
+	subscriptions *SubscriptionRing
 }
 
 type subscription struct {
@@ -130,7 +132,7 @@ func (req *bcreq) Type() sigReqType {
 func NewSignals() *Hub {
 	signals := &Hub{
 		requests: make(chan sigReq),
-		subscriptions: make([]*subscription, 0),
+		subscriptions: NewSubscriptionRing(),
 	}
 
 	go signals.listenToReqs()
@@ -138,19 +140,12 @@ func NewSignals() *Hub {
 }
 
 func (hub *Hub) subscribe(sub *subscription) {
-	sub.id = uint(len(hub.subscriptions))
-	hub.subscriptions = append(hub.subscriptions, sub)
+	sub.id = uint(hub.subscriptions.Len())
+	hub.subscriptions.Add(sub)
 }
 
 func (hub *Hub) unsubscribe(sub *subscription) {
-	subscriptions := make([]*subscription, 0, 0)
-	for _, sub := range hub.subscriptions {
-		if sub.id != sub.id {
-			subscriptions = append(subscriptions, sub)
-		}
-	}
-
-	hub.subscriptions = subscriptions
+	hub.subscriptions.Remove(sub)
 }
 
 func (hub *Hub) signal(i interface{}, sub *subscription) {
