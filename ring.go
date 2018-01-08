@@ -47,9 +47,6 @@ type RingBuffer struct {
 
 
 func (buf *RingBuffer) listenToReads() {
-	for req := range buf.readChan {
-
-	}
 }
 
 
