@@ -57,7 +57,15 @@ func (rng *SubscriptionRing) Remove(sub *subscription) bool {
 		next := node.Next()
 		nextSub, ok := next.Value.(*subscription)
 		if ok && nextSub.id == sub.id {
+			if next == rng.head {
+				rng.head = next.Next()
+			}
+			if next == rng.current {
+				rng.current = next.Next()
+			}
+
 			node.Unlink(1)
+
 			return true
 		}
 		node = node.Next()
