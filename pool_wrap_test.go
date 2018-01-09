@@ -77,7 +77,7 @@ func TestWorkerPool_WrapShutdown(t *testing.T) {
 }
 
 func TestWorkerPool_WrapWithRetry(t *testing.T) {
-	t.Skip("This fails pretty regularly: see #14")
+	//t.Skip("This fails pretty regularly: see #14")
 
 	workers := []Worker{
 		newAddOneRetryWorker(errors.New("error: something bad happened"), 3),

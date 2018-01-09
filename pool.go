@@ -190,7 +190,7 @@ func (pool *WorkerPool) assign(worker Worker, op Operation) {
 
 	if retry {
 		op.IncrementTry()
-		pool.retryOperation(op, worker)
+		go pool.retryOperation(op, worker)
 	} else {
 		worker.HandleError(err, op)
 		op.Done()
@@ -457,7 +457,6 @@ func (pool *WorkerPool) pipe(inStream <-chan Operation, outStream chan Operation
 	for op := range inStream {
 		// execute the op
 		doErr := pool.Do(op)
-
 		if doErr != nil {
 			// TODO: do some error handling here
 			op.Done()
@@ -465,10 +464,10 @@ func (pool *WorkerPool) pipe(inStream <-chan Operation, outStream chan Operation
 		taskWg.Add(1)
 
 		// wait till the op is done, and then move it to the outstream
-		go func(op Operation, taskWg *sync.WaitGroup) {
+		go func(op Operation, tW *sync.WaitGroup) {
 			op.Wait()
 			outStream <- op
-			taskWg.Done()
+			tW.Done()
 		}(op, &taskWg)
 	}
 
