@@ -53,7 +53,7 @@ func TestHub_Broadcast(t *testing.T) {
 		t.Errorf("expect there to be 2 subscription (actual: %d)", hub.subscriptions.Len())
 	}
 
-	testWithTimeout(t, func(t *testing.T){
+	testWithTimeout(t, func(t *testing.T) {
 		hub.Broadcast(1)
 
 		s := <-sub1.Signals
