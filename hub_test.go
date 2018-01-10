@@ -77,3 +77,20 @@ func TestHub_Broadcast(t *testing.T) {
 		}
 	}, 1*time.Second)
 }
+
+func TestHub_Unsubscribe(t *testing.T) {
+	hub := NewHub()
+	sub1 := hub.Subscribe()
+	hub.Subscribe()
+
+	hub.Unsubscribe(sub1)
+
+	if hub.subscriptions.Len() != 1 {
+		t.Errorf("expect the length after unsubscribe to be 1 (actual: %d)", hub.subscriptions.Len())
+	}
+
+	if hub.subscriptions.Current().id != 2 {
+		t.Errorf("expect the id of the remaining current node to be 1 (actual: %d)",
+			hub.subscriptions.Current().id)
+	}
+}
