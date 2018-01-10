@@ -1,6 +1,9 @@
 package harbinger
 
-import "container/ring"
+import (
+	"container/ring"
+	"sync"
+)
 
 type SubscriptionRing struct {
 	current *ring.Ring
@@ -84,8 +87,8 @@ func (rng *SubscriptionRing) Remove(sub *subscription) bool {
 
 
 type Hub struct {
-	requests chan sigReq
 	subscriptions *SubscriptionRing
+	lock          *sync.Mutex
 }
 
 type subscription struct {
@@ -93,84 +96,10 @@ type subscription struct {
 	id uint
 }
 
-type sigReqType uint
-
-const (
-	sub = sigReqType(0)
-	unsub = sigReqType(1)
-	signal = sigReqType(2)
-	broadcast = sigReqType(3)
-)
-
-type sigReq interface {
-	Type() sigReqType
-}
-
-type subreq struct {
-	*subscription
-}
-
-type unsubreq subreq
-
-func (req *unsubreq) Type() sigReqType {
-	return unsub
-}
-
-func (req *subreq) Type() sigReqType {
-	return sub
-}
-
-type sigreq struct {
-	signal interface{}
-}
-
-func (req *sigreq) Type() sigReqType {
-	return signal
-}
-
-type bcreq sigreq
-
-func (req *bcreq) Type() sigReqType {
-	return broadcast
-}
-
-func NewSignals() *Hub {
-	signals := &Hub{
-		requests: make(chan sigReq),
+func NewHub() *Hub {
+	return &Hub{
 		subscriptions: NewSubscriptionRing(),
-	}
-
-	go signals.listenToReqs()
-	return signals
-}
-
-func (hub *Hub) subscribe(sub *subscription) {
-	sub.id = uint(hub.subscriptions.Len())
-	hub.subscriptions.Add(sub)
-}
-
-func (hub *Hub) unsubscribe(sub *subscription) {
-	hub.subscriptions.Remove(sub)
-}
-
-func (hub *Hub) signal(i interface{}, sub *subscription) {
-
-}
-
-func (hub *Hub) listenToReqs() {
-	// listen
-	for req := range hub.requests {
-		switch v := req.(type) {
-		case *subreq:
-			hub.subscribe(v.subscription)
-
-		case *unsubreq:
-			hub.unsubscribe(v.subscription)
-
-		case *sigreq:
-
-		case *bcreq:
-		}
+		lock: &sync.Mutex{},
 	}
 }
 
@@ -180,27 +109,32 @@ func (hub *Hub) Subscribe() *subscription {
 		Signals: make(chan interface{}),
 	}
 
-	// register channel
-	hub.requests <- &subreq {
-		subscription: sub,
-	}
+	hub.lock.Lock()
+	hub.subscriptions.Add(sub)
+	sub.id = uint(hub.subscriptions.Len())
+	hub.lock.Unlock()
 
 	return sub
 }
 
-func (hub *Hub) Unsubscribe(subscription *subscription) {
-	hub.requests <- &unsubreq {
-		subscription: subscription,
-	}
+func (hub *Hub) Unsubscribe(sub *subscription) {
+	hub.lock.Lock()
+	defer hub.lock.Unlock()
+
+	hub.subscriptions.Remove(sub)
 }
 
 
 func (hub *Hub) Signal(i interface{}) {
+	hub.lock.Lock()
+	defer hub.lock.Unlock()
 	hub.subscriptions.Current().Signals <- i
 	hub.subscriptions.Next()
 }
 
 func (hub *Hub) Broadcast(i interface{}) {
+	hub.lock.Lock()
+	defer hub.lock.Unlock()
 	hub.subscriptions.Do(func(s *subscription){
 		s.Signals <- i
 	})
