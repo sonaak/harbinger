@@ -172,3 +172,25 @@ func TestSubscriptionRing_Do(t *testing.T) {
 		}
 	}
 }
+
+
+func TestSubscriptionRing_Current(t *testing.T) {
+		subscriptions := []*subscription {
+		{ id: 1 },
+		{ id: 5 },
+		{ id: 8 },
+		{ id: 15 },
+		{ id: 0 },
+	}
+
+	rng := NewSubscriptionRing()
+	for _, subs := range subscriptions {
+		rng.Add(subs)
+	}
+
+	rng.Next()
+	rng.Next()
+	if rng.Current().id != 8 {
+		t.Errorf("expect Current() to have id 8 (actual: %d)", rng.Current().id)
+	}
+}
