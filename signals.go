@@ -24,6 +24,11 @@ func (rng *SubscriptionRing) Do(f func(*subscription)) {
 }
 
 
+func (rng *SubscriptionRing) Current() *subscription {
+	return rng.current.Value.(*subscription)
+}
+
+
 // Len - returns the number of nodes in the ring
 // (see container/ring.Ring.Len)
 func (rng *SubscriptionRing) Len() int {
@@ -191,9 +196,12 @@ func (hub *Hub) Unsubscribe(subscription *subscription) {
 
 
 func (hub *Hub) Signal(i interface{}) {
-
+	hub.subscriptions.Current().Signals <- i
+	hub.subscriptions.Next()
 }
 
 func (hub *Hub) Broadcast(i interface{}) {
-
+	hub.subscriptions.Do(func(s *subscription){
+		s.Signals <- i
+	})
 }

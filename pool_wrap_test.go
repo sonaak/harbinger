@@ -77,8 +77,6 @@ func TestWorkerPool_WrapShutdown(t *testing.T) {
 }
 
 func TestWorkerPool_WrapWithRetry(t *testing.T) {
-	//t.Skip("This fails pretty regularly: see #14")
-
 	workers := []Worker{
 		newAddOneRetryWorker(errors.New("error: something bad happened"), 3),
 		newAddOneRetryWorker(errors.New("error: something bad happened"), 4),
@@ -86,9 +84,8 @@ func TestWorkerPool_WrapWithRetry(t *testing.T) {
 
 	pool := NewPool(workers)
 	pool.Start()
-	// TODO: deadlock with defer pool.Shutdown()
-	defer pool.Shutdown()
 
+	defer pool.Shutdown()
 	inputStream := make(chan Operation)
 	ops := []Operation{
 		newAddOneOperation(1, 10*time.Millisecond),
