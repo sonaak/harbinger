@@ -127,8 +127,11 @@ func (hub *Hub) Signal(i interface{}) {
 
 func (hub *Hub) Broadcast(i interface{}) {
 	hub.lock.Lock()
-	go hub.subscriptions.Do(func(s *subscription) {
-		defer hub.lock.Unlock()
-		s.Signals <- i
+	defer hub.lock.Unlock()
+
+	hub.subscriptions.Do(func(sub *subscription) {
+		go func(s *subscription) {
+			s.Signals <- i
+		}(sub)
 	})
 }
