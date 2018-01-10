@@ -1,15 +1,13 @@
 package harbinger
 
 import (
-	"testing"
 	"sort"
+	"testing"
 )
 
-
-
 func TestNewSubscriptionRing(t *testing.T) {
-	s := &subscription {
-		id: 2,
+	s := &subscription{
+		id:      2,
 		Signals: make(chan interface{}),
 	}
 
@@ -36,14 +34,13 @@ func TestNewSubscriptionRing(t *testing.T) {
 	}
 }
 
-
 func TestSubscriptionRing_AddNext(t *testing.T) {
-	subscriptions := []*subscription {
-		{ id: 1 },
-		{ id: 5 },
-		{ id: 8 },
-		{ id: 15 },
-		{ id: 0 },
+	subscriptions := []*subscription{
+		{id: 1},
+		{id: 5},
+		{id: 8},
+		{id: 15},
+		{id: 0},
 	}
 
 	rng := NewSubscriptionRing()
@@ -71,14 +68,13 @@ func TestSubscriptionRing_AddNext(t *testing.T) {
 	}
 }
 
-
 func TestSubscriptionRing_Remove(t *testing.T) {
-	subscriptions := []*subscription {
-		{ id: 1 },
-		{ id: 5 },
-		{ id: 8 },
-		{ id: 15 },
-		{ id: 0 },
+	subscriptions := []*subscription{
+		{id: 1},
+		{id: 5},
+		{id: 8},
+		{id: 15},
+		{id: 0},
 	}
 
 	rng := NewSubscriptionRing()
@@ -114,14 +110,13 @@ func TestSubscriptionRing_Remove(t *testing.T) {
 	}
 }
 
-
 func TestSubscriptionRing_RemoveHead(t *testing.T) {
-	subscriptions := []*subscription {
-		{ id: 1 },
-		{ id: 5 },
-		{ id: 8 },
-		{ id: 15 },
-		{ id: 0 },
+	subscriptions := []*subscription{
+		{id: 1},
+		{id: 5},
+		{id: 8},
+		{id: 15},
+		{id: 0},
 	}
 
 	rng := NewSubscriptionRing()
@@ -143,14 +138,13 @@ func TestSubscriptionRing_RemoveHead(t *testing.T) {
 	}
 }
 
-
 func TestSubscriptionRing_Do(t *testing.T) {
-	subscriptions := []*subscription {
-		{ id: 1 },
-		{ id: 5 },
-		{ id: 8 },
-		{ id: 15 },
-		{ id: 0 },
+	subscriptions := []*subscription{
+		{id: 1},
+		{id: 5},
+		{id: 8},
+		{id: 15},
+		{id: 0},
 	}
 
 	rng := NewSubscriptionRing()
@@ -159,12 +153,12 @@ func TestSubscriptionRing_Do(t *testing.T) {
 	}
 
 	processedIds := []int{}
-	rng.Do(func(s *subscription){
+	rng.Do(func(s *subscription) {
 		processedIds = append(processedIds, int(s.id))
 	})
 
 	sort.Ints(processedIds)
-	expectedList := []int{0, 1, 5, 8, 15,}
+	expectedList := []int{0, 1, 5, 8, 15}
 	for i, e := range expectedList {
 		if processedIds[i] != e {
 			t.Errorf("expect subscription %d to be processed", e)
@@ -173,14 +167,13 @@ func TestSubscriptionRing_Do(t *testing.T) {
 	}
 }
 
-
 func TestSubscriptionRing_Current(t *testing.T) {
-		subscriptions := []*subscription {
-		{ id: 1 },
-		{ id: 5 },
-		{ id: 8 },
-		{ id: 15 },
-		{ id: 0 },
+	subscriptions := []*subscription{
+		{id: 1},
+		{id: 5},
+		{id: 8},
+		{id: 15},
+		{id: 0},
 	}
 
 	rng := NewSubscriptionRing()

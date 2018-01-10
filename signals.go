@@ -7,18 +7,15 @@ import (
 
 type SubscriptionRing struct {
 	current *ring.Ring
-	head *ring.Ring
+	head    *ring.Ring
 }
-
 
 func NewSubscriptionRing() *SubscriptionRing {
-	return &SubscriptionRing{
-	}
+	return &SubscriptionRing{}
 }
 
-
 func (rng *SubscriptionRing) Do(f func(*subscription)) {
-	rng.current.Do(func(i interface{}){
+	rng.current.Do(func(i interface{}) {
 		switch s := i.(type) {
 		case *subscription:
 			f(s)
@@ -26,11 +23,9 @@ func (rng *SubscriptionRing) Do(f func(*subscription)) {
 	})
 }
 
-
 func (rng *SubscriptionRing) Current() *subscription {
 	return rng.current.Value.(*subscription)
 }
-
 
 // Len - returns the number of nodes in the ring
 // (see container/ring.Ring.Len)
@@ -38,12 +33,10 @@ func (rng *SubscriptionRing) Len() int {
 	return rng.current.Len()
 }
 
-
 // Next - advances the underlying ring node forward by one
 func (rng *SubscriptionRing) Next() {
 	rng.current = rng.current.Next()
 }
-
 
 // Add - add a subscription as a ring item to the end
 func (rng *SubscriptionRing) Add(sub *subscription) {
@@ -58,7 +51,6 @@ func (rng *SubscriptionRing) Add(sub *subscription) {
 	rng.head = newNode
 	rng.current = newNode
 }
-
 
 // Remove - remove a the first occurrence, if any, of a given subscription and returns
 // true. If the node is not removed, the function returns false.
@@ -85,7 +77,6 @@ func (rng *SubscriptionRing) Remove(sub *subscription) bool {
 	return false
 }
 
-
 type Hub struct {
 	subscriptions *SubscriptionRing
 	lock          *sync.Mutex
@@ -93,16 +84,15 @@ type Hub struct {
 
 type subscription struct {
 	Signals chan interface{}
-	id uint
+	id      uint
 }
 
 func NewHub() *Hub {
 	return &Hub{
 		subscriptions: NewSubscriptionRing(),
-		lock: &sync.Mutex{},
+		lock:          &sync.Mutex{},
 	}
 }
-
 
 func (hub *Hub) Subscribe() *subscription {
 	sub := &subscription{
@@ -124,7 +114,6 @@ func (hub *Hub) Unsubscribe(sub *subscription) {
 	hub.subscriptions.Remove(sub)
 }
 
-
 func (hub *Hub) Signal(i interface{}) {
 	hub.lock.Lock()
 	defer hub.lock.Unlock()
@@ -135,7 +124,7 @@ func (hub *Hub) Signal(i interface{}) {
 func (hub *Hub) Broadcast(i interface{}) {
 	hub.lock.Lock()
 	defer hub.lock.Unlock()
-	hub.subscriptions.Do(func(s *subscription){
+	hub.subscriptions.Do(func(s *subscription) {
 		s.Signals <- i
 	})
 }

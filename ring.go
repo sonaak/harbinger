@@ -5,16 +5,16 @@ import (
 )
 
 type asyncReq struct {
-	Ref []byte
-	done chan interface{}
+	Ref      []byte
+	done     chan interface{}
 	doneOnce *sync.Once
-	Err error
+	Err      error
 }
 
 func (req *asyncReq) Wait() {
-	for range req.done {}
+	for range req.done {
+	}
 }
-
 
 func (req *asyncReq) Done() {
 	req.doneOnce.Do(func() {
@@ -26,46 +26,40 @@ func (req *asyncReq) Error() error {
 	return req.Err
 }
 
-
 func newReq(p []byte) *asyncReq {
-	return &asyncReq {
-		Ref: p,
-		done: make(chan interface{}),
+	return &asyncReq{
+		Ref:      p,
+		done:     make(chan interface{}),
 		doneOnce: &sync.Once{},
-		Err: nil,
+		Err:      nil,
 	}
 }
 
-
 type RingBuffer struct {
-	readPtr, writePtr int
+	readPtr, writePtr   int
 	readChan, writeChan chan *asyncReq
 
 	closed bool
-	buf []byte
+	buf    []byte
 }
-
 
 func (buf *RingBuffer) listenToReads() {
 }
 
-
 func NewRingBuffer(capacity uint) *RingBuffer {
-	return &RingBuffer {
-		readPtr: 0,
+	return &RingBuffer{
+		readPtr:  0,
 		writePtr: 0,
-		closed: false,
+		closed:   false,
 
 		buf: make([]byte, capacity),
 	}
 }
 
-
 func (buffer *RingBuffer) Read(p []byte) (n int, err error) {
 
 	return
 }
-
 
 func (buffer *RingBuffer) Write(p []byte) (n int, err error) {
 	return
