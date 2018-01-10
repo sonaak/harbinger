@@ -117,14 +117,18 @@ func (hub *Hub) Unsubscribe(sub *subscription) {
 func (hub *Hub) Signal(i interface{}) {
 	hub.lock.Lock()
 	defer hub.lock.Unlock()
-	hub.subscriptions.Current().Signals <- i
+	sub := hub.subscriptions.Current()
+
+	go func() {
+		sub.Signals <- i
+	}()
 	hub.subscriptions.Next()
 }
 
 func (hub *Hub) Broadcast(i interface{}) {
 	hub.lock.Lock()
-	defer hub.lock.Unlock()
-	hub.subscriptions.Do(func(s *subscription) {
+	go hub.subscriptions.Do(func(s *subscription) {
+		defer hub.lock.Unlock()
 		s.Signals <- i
 	})
 }

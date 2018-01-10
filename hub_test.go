@@ -1,6 +1,10 @@
 package harbinger
 
-import "testing"
+import (
+	"testing"
+	"time"
+	"reflect"
+)
 
 func TestNewHub(t *testing.T) {
 	hub := NewHub()
@@ -12,4 +16,30 @@ func TestNewHub(t *testing.T) {
 	if hub.lock == nil {
 		t.Error("expect hub.lock to not be nil")
 	}
+}
+
+
+func TestHub_Subscribe(t *testing.T) {
+	hub := NewHub()
+
+	sub := hub.Subscribe()
+	if hub.subscriptions.Len() != 1 {
+		t.Errorf("expect there to be 1 subscription (actual: %d)", hub.subscriptions.Len())
+	}
+
+	testWithTimeout(t, func(t *testing.T){
+		hub.Signal(int(1))
+
+		s := <- sub.Signals
+		switch v := s.(type) {
+		case int:
+			if v != 1 {
+				t.Errorf("expect the signal to be int 1 (actual: %d)", v)
+			}
+
+		default:
+			t.Errorf("expect type to be int (actual: %s)", reflect.TypeOf(s).Name())
+		}
+
+	}, 1 * time.Second)
 }
