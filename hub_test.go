@@ -1,10 +1,10 @@
 package harbinger
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
-	"fmt"
 )
 
 func TestNewHub(t *testing.T) {
@@ -21,7 +21,7 @@ func TestNewHub(t *testing.T) {
 
 func verifySignal(signal chan interface{}, expect int) (valid bool, reason string) {
 	valid = true
-	s := <- signal
+	s := <-signal
 
 	switch v := s.(type) {
 	case int:
