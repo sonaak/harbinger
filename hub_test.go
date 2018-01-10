@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 	"time"
+	"fmt"
 )
 
 func TestNewHub(t *testing.T) {
@@ -18,6 +19,25 @@ func TestNewHub(t *testing.T) {
 	}
 }
 
+func verifySignal(signal chan interface{}, expect int) (valid bool, reason string) {
+	valid = true
+	s := <- signal
+
+	switch v := s.(type) {
+	case int:
+		if v != expect {
+			valid = false
+			reason = fmt.Sprintf("expect the signal to be int %d (actual: %d)", expect, v)
+		}
+
+	default:
+		valid = false
+		reason = fmt.Sprintf("expect type to be int (actual: %s)", reflect.TypeOf(s).Name())
+	}
+
+	return
+}
+
 func TestHub_Subscribe(t *testing.T) {
 	hub := NewHub()
 
@@ -29,17 +49,10 @@ func TestHub_Subscribe(t *testing.T) {
 	testWithTimeout(t, func(t *testing.T) {
 		hub.Signal(int(1))
 
-		s := <-sub.Signals
-		switch v := s.(type) {
-		case int:
-			if v != 1 {
-				t.Errorf("expect the signal to be int 1 (actual: %d)", v)
-			}
-
-		default:
-			t.Errorf("expect type to be int (actual: %s)", reflect.TypeOf(s).Name())
+		valid, reason := verifySignal(sub.Signals, 1)
+		if !valid {
+			t.Error(reason)
 		}
-
 	}, 1*time.Second)
 }
 
@@ -55,28 +68,12 @@ func TestHub_Broadcast(t *testing.T) {
 
 	testWithTimeout(t, func(t *testing.T) {
 		hub.Broadcast(1)
-
-		s := <-sub1.Signals
-		switch v := s.(type) {
-		case int:
-			if v != 1 {
-				t.Errorf("expect the signal to be int 1 (actual: %d)", v)
-			}
-
-		default:
-			t.Errorf("expect type to be int (actual: %s)", reflect.TypeOf(s).Name())
+		if valid, reason := verifySignal(sub1.Signals, 1); !valid {
+			t.Error(reason)
 		}
 
-		s = <-sub2.Signals
-		switch v := s.(type) {
-		case int:
-			if v != 1 {
-				t.Errorf("expect the signal to be int 1 (actual: %d)", v)
-			}
-
-		default:
-			t.Errorf("expect type to be int (actual: %s)", reflect.TypeOf(s).Name())
+		if valid, reason := verifySignal(sub2.Signals, 1); !valid {
+			t.Error(reason)
 		}
-
 	}, 1*time.Second)
 }
